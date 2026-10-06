@@ -15,6 +15,9 @@ jobs:
           node-version: 24
           cache: npm
 
+      - name: Frontend must not reference the LLM directly
+        run: "! grep -rniE 'GEMINI_API_KEY|generativelanguage|@google/genai' frontend --include='*.ts' --include='*.tsx' --exclude-dir=node_modules --exclude-dir=.next"
+
       - name: Install dependencies
         run: npm ci
 
