@@ -1,16 +1,21 @@
-import express from "express";
-import cors from "cors";
+import { loadEnv, type Env } from "./config/env.js";
+import { GeminiProvider } from "./llm/geminiProvider.js";
+import { LlmService } from "./llm/llmService.js";
+import { createApp } from "./app.js";
 
-const app = express();
-const port = Number(process.env.PORT ?? 4000);
+let env: Env;
+try {
+  env = loadEnv();
+} catch (err) {
+  console.error(`[config] ${err instanceof Error ? err.message : String(err)}`);
+  process.exit(1); // AC1.2
+}
 
-app.use(cors());
-app.use(express.json());
+const llm = new LlmService(
+  new GeminiProvider({ apiKey: env.GEMINI_API_KEY, model: env.LLM_MODEL }),
+);
+const app = createApp({ llm });
 
-app.get("/health", (_req, res) => {
-  res.json({ status: "ok" });
-});
-
-app.listen(port, () => {
-  console.log(`Backend running on http://localhost:${port}`);
+app.listen(env.PORT, () => {
+  console.log(`Backend running on http://localhost:${env.PORT}`);
 });

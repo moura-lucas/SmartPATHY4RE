@@ -6,15 +6,15 @@
 
 ## 1. Por que esse stack encaixa bem
 
-| Necessidade da plataforma | Tecnologia do seu currículo |
-|---|---|
-| Interface web (Dashboard, formulários, telas de persona/requisitos) | **Next.js + React** |
-| API/backend que orquestra os prompts do SmartPATHY e PATHY4RE | **Express.js (Node/TypeScript)** |
-| Persistência de projetos, personas e requisitos gerados | **MySQL + Prisma ORM** |
-| Ambiente reprodutível para desenvolvimento e entrega do TCC | **Docker** |
-| Testes automatizados do backend/frontend | **Jest** |
-| Integração e entrega contínua | **Git/GitHub + GitHub Actions** |
-| Organização do trabalho ao longo do semestre | **Scrum/Kanban** |
+| Necessidade da plataforma                                           | Tecnologia do seu currículo      |
+| ------------------------------------------------------------------- | -------------------------------- |
+| Interface web (Dashboard, formulários, telas de persona/requisitos) | **Next.js + React**              |
+| API/backend que orquestra os prompts do SmartPATHY e PATHY4RE       | **Express.js (Node/TypeScript)** |
+| Persistência de projetos, personas e requisitos gerados             | **MySQL + Prisma ORM**           |
+| Ambiente reprodutível para desenvolvimento e entrega do TCC         | **Docker**                       |
+| Testes automatizados do backend/frontend                            | **Jest**                         |
+| Integração e entrega contínua                                       | **Git/GitHub + GitHub Actions**  |
+| Organização do trabalho ao longo do semestre                        | **Scrum/Kanban**                 |
 
 Você não precisa aprender uma stack nova: dá para construir a plataforma inteira com o que já está no seu currículo. O único componente novo é a integração com a API de um LLM (documentada abaixo), que é simples — basta uma chamada HTTP.
 
@@ -54,22 +54,26 @@ Você não precisa aprender uma stack nova: dá para construir a plataforma inte
 ## 3. Módulos do backend
 
 ### 3.1 Módulo de Projetos (CRUD básico)
+
 - Endpoints REST: `POST /projects`, `GET /projects`, `GET /projects/:id`
 - Armazena: nome do projeto, descrição da aplicação, perfil-alvo, nível de experiência tecnológica, notas adicionais (campos do formulário "Project Creation" descrito no Capítulo 6).
 
 ### 3.2 Módulo SmartPATHY (geração de persona)
+
 - Endpoint: `POST /projects/:id/generate-persona`
 - Recebe os dados do projeto e monta a sequência de prompts estruturados (multi-prompt strategy) descrita na dissertação, um prompt por dimensão PATHY (Do, Feel/Think/Believe, Experience with Technology, Problems, Needs, Existing Solutions).
 - Chama a API do LLM sequencialmente ou em uma única chamada estruturada (você pode simplificar para 1 chamada com saída em JSON, o que facilita a persistência).
 - Salva o resultado estruturado no banco.
 
 ### 3.3 Módulo PATHY4RE (geração de requisitos)
+
 - Endpoint: `POST /projects/:id/generate-requirements`
 - Usa a persona PATHY validada como contexto de entrada.
 - Chama o LLM pedindo requisitos funcionais e não-funcionais em formato estruturado (ex: JSON com `type`, `description`, `priority`).
 - Salva os requisitos vinculados ao projeto.
 
 ### 3.4 Módulo de Exportação
+
 - Endpoint: `GET /projects/:id/export?format=pdf|json|docx`
 - Gera um documento consolidado (persona + requisitos) para uso em outras ferramentas de engenharia de software.
 
@@ -140,14 +144,14 @@ model Requirement {
 # docker-compose.yml (esboço)
 services:
   frontend:
-    build: ./frontend      # Next.js
+    build: ./frontend # Next.js
     ports: ["3000:3000"]
   backend:
-    build: ./backend       # Express + TS + Prisma
+    build: ./backend # Express + TS + Prisma
     ports: ["4000:4000"]
     environment:
       - DATABASE_URL=mysql://user:pass@db:3306/smartpathy
-      - LLM_API_KEY=${LLM_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     depends_on: [db]
   db:
     image: mysql:8
