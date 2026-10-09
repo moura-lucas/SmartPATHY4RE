@@ -32,3 +32,19 @@ it("responds with a 500 status and a generic message for unexpected errors.", as
   expect(res.status).toBe(500);
   expect(res.body).toEqual({ error: "Internal server error." });
 });
+
+it("responds with a 400 status when the JSON body is malformed.", async () => {
+  const app = express();
+  app.use(express.json());
+  app.post("/echo", (req, res) => {
+    res.json(req.body);
+  });
+  app.use(errorHandler);
+
+  const res = await request(app)
+    .post("/echo")
+    .set("Content-Type", "application/json")
+    .send("{");
+  expect(res.status).toBe(400);
+  expect(res.body).toEqual({ error: "Malformed JSON body." });
+});
