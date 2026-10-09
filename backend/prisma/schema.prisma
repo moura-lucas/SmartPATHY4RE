@@ -13,13 +13,15 @@ datasource db {
 }
 
 model Project {
-  id                  String   @id @default(uuid())
-  name                String
-  description         String
-  targetProfile       String
-  techExperienceLevel String
-  notes               String?
-  createdAt           DateTime @default(now())
+  id                  String        @id @default(uuid())
+  name                String        @db.VarChar(120)
+  domain              String        @db.VarChar(80)
+  description         String        @db.Text
+  additionalContext   String?       @db.Text
+  personaName         String?       @db.VarChar(80)
+  personaAge          Int?
+  techExperienceLevel String        @db.VarChar(16)
+  createdAt           DateTime      @default(now())
   persona             Persona?
   requirements        Requirement[]
 }

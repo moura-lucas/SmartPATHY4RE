@@ -13,7 +13,8 @@
     "pretest": "npm run build -w @smartpathy/shared",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage --passWithNoTests",
-    "pretest:coverage": "npm run build -w @smartpathy/shared"
+    "pretest:coverage": "npm run build -w @smartpathy/shared",
+    "postinstall": "prisma generate"
   },
   "keywords": [],
   "author": "",

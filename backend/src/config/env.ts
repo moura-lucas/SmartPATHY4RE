@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const EnvSchema = z.object({
+  DATABASE_URL: z.string().trim().min(1),
   GEMINI_API_KEY: z.string().trim().min(1),
   LLM_MODEL: z.string().min(1).default("gemini-3.5-flash"),
   PORT: z.coerce.number().int().positive().default(4000),
