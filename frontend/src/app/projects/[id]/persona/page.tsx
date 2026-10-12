@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-// Placeholder: the persona generation flow is implemented in US3.
+// Placeholder: the persona view is implemented in US4.
 export default async function PersonaPage({
   params,
 }: PageProps<"/projects/[id]/persona">) {
@@ -16,7 +16,7 @@ export default async function PersonaPage({
       </Link>
       <h1 className="mt-4 text-2xl font-semibold">PATHY Persona</h1>
       <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-        Persona generation is coming in US3.
+        Persona generated. The full view is coming in US4.
       </p>
     </main>
   );
