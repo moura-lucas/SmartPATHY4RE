@@ -6,7 +6,7 @@ import { LlmError } from "../llm/errors.js";
 import { LlmService } from "../llm/llmService.js";
 import type { LlmProvider } from "../llm/provider.js";
 import type { ProjectRepository } from "../projects/project.repository.js";
-import { llmResponse, project } from "./persona.fixtures.js";
+import { buildPersonaDto, llmResponse, project } from "./persona.fixtures.js";
 import type { PersonaRepository } from "./persona.repository.js";
 
 let complete: LlmProvider["complete"];
@@ -73,5 +73,34 @@ describe("POST /projects/:id/generate-persona", () => {
     expect(res.status).toBe(502);
     expect(res.text).not.toMatch(/401|Gemini/);
     expect(personaRepository.upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /projects/:id/persona", () => {
+  it("returns the stored persona with all 17 PATHY fields (AC4.1 / AC4.5)", async () => {
+    personaRepository.findByProjectId = vi.fn(async () => buildPersonaDto());
+
+    const res = await request(app()).get("/projects/project-1/persona");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(buildPersonaDto());
+    for (const { section, field } of PATHY_FIELDS) {
+      expect(res.body[section][field]).toEqual(expect.any(String));
+    }
+  });
+
+  it("responds 404 when the project has no persona yet (AC4.6)", async () => {
+    const res = await request(app()).get("/projects/project-1/persona");
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Persona not found." });
+  });
+
+  it("responds 404 when the project does not exist (AC4.7)", async () => {
+    const res = await request(app()).get("/projects/missing/persona");
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Project not found." });
+    expect(personaRepository.findByProjectId).not.toHaveBeenCalled();
   });
 });

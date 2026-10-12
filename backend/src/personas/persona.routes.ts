@@ -17,5 +17,19 @@ export function personaRoutes(service: PersonaService) {
       .json(persona);
   });
 
+  // AC4.1 / AC4.6: separate 404 messages so the client can tell the two cases apart.
+  router.get("/:id/persona", async (req, res) => {
+    const result = await service.find(req.params.id);
+    if (!result) {
+      res.status(404).json({ error: "Project not found." });
+      return;
+    }
+    if (!result.persona) {
+      res.status(404).json({ error: "Persona not found." });
+      return;
+    }
+    res.json(result.persona);
+  });
+
   return router;
 }
