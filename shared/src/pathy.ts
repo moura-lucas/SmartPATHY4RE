@@ -186,6 +186,21 @@ export const PATHY_FIELDS = [
     label: "Negative or dispensable characteristics",
   },
 ] as const satisfies readonly PathyFieldDefinition[];
+export type PathyField = (typeof PATHY_FIELDS)[number];
+
+/** Catalog fields of a section, in catalog order. */
+export function pathyFieldsOf<S extends PathySection>(
+  section: S,
+): Extract<PathyField, { section: S }>[] {
+  return PATHY_FIELDS.filter(
+    (f): f is Extract<PathyField, { section: S }> => f.section === section,
+  );
+}
+
+/** The persona's answer to a catalog field. */
+export function pathyAnswer(persona: Persona, { section, field }: PathyField): string {
+  return (persona[section] as Record<string, string>)[field] ?? "";
+}
 
 /** Persona as returned by the API. */
 export interface PersonaDto extends Persona {

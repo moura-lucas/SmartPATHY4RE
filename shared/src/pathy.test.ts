@@ -3,6 +3,8 @@ import {
   PATHY_CODES,
   PATHY_FIELDS,
   PATHY_SECTIONS,
+  pathyAnswer,
+  pathyFieldsOf,
   personaSchema,
   type Persona,
 } from "./pathy.js";
@@ -66,5 +68,24 @@ describe("PATHY catalog", () => {
     const persona = buildValidPersona();
     persona.problems.routineProblems = "   ";
     expect(personaSchema.safeParse(persona).success).toBe(false);
+  });
+});
+
+describe("catalog helpers (US4)", () => {
+  it("lists each section's fields in catalog order (AC4.3 / AC4.4)", () => {
+    expect(pathyFieldsOf("who").map((f) => f.code)).toEqual(["W1", "W2", "W3", "W4"]);
+    expect(pathyFieldsOf("problems").map((f) => f.code)).toEqual(["P1", "P2"]);
+    expect(
+      PATHY_SECTIONS.flatMap(({ key }) => pathyFieldsOf(key).map((f) => f.code)),
+    ).toEqual([...PATHY_CODES]);
+  });
+
+  it("reads the persona's answer for a catalog field", () => {
+    const persona = buildValidPersona();
+    const [w1] = pathyFieldsOf("who");
+    const s3 = PATHY_FIELDS.find((f) => f.code === "S3")!;
+
+    expect(pathyAnswer(persona, w1!)).toBe("Nurse");
+    expect(pathyAnswer(persona, s3)).toBe(persona.existingSolutions.negativeCharacteristics);
   });
 });
