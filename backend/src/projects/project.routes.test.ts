@@ -3,9 +3,14 @@ import request from "supertest";
 import type { ProjectDto } from "@smartpathy/shared";
 import { createApp } from "../app.js";
 import { LlmService } from "../llm/llmService.js";
+import type { PersonaRepository } from "../personas/persona.repository.js";
 import type { ProjectRepository } from "./project.repository.js";
 
 const llm = new LlmService({ complete: async () => "{}" });
+const personaRepository: PersonaRepository = {
+  upsert: vi.fn(),
+  findByProjectId: vi.fn(),
+};
 
 const valid = {
   name: "  Clinic App  ",
@@ -29,7 +34,7 @@ const stored: ProjectDto = {
 let repository: ProjectRepository;
 
 function app() {
-  return createApp({ llm, projectRepository: repository });
+  return createApp({ llm, projectRepository: repository, personaRepository });
 }
 
 beforeEach(() => {

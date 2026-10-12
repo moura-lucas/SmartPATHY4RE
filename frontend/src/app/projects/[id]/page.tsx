@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProject } from "@/lib/api";
+import { GeneratePersonaButton } from "./GeneratePersonaButton";
 
 const LEVEL_LABELS = { low: "Low", moderate: "Moderate", high: "High" } as const;
 
@@ -44,9 +45,7 @@ export default async function ProjectPage({
       </dl>
 
       {/* AC2.7: starts the persona generation flow (US3) for this project. */}
-      <Link href={`/projects/${project.id}/persona`} className="btn-primary mt-10">
-        Generate PATHY Persona
-      </Link>
+      <GeneratePersonaButton projectId={project.id} />
     </main>
   );
 }

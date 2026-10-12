@@ -27,16 +27,19 @@ model Project {
 }
 
 model Persona {
-  id                String   @id @default(uuid())
-  projectId         String   @unique
-  project           Project  @relation(fields: [projectId], references: [id])
-  doDimension       String   @db.Text
-  feelThinkBelieve  String   @db.Text
-  techExperience    String   @db.Text
-  problems          String   @db.Text
-  needs             String   @db.Text
-  existingSolutions String   @db.Text
-  createdAt         DateTime @default(now())
+  id                       String   @id @default(uuid())
+  projectId                String   @unique
+  project                  Project  @relation(fields: [projectId], references: [id])
+  name                     String   @db.VarChar(80)
+  age                      Int
+  techExperienceLevel      String   @db.VarChar(16)
+  who                      Json
+  context                  Json
+  experienceWithTechnology Json
+  problems                 Json
+  existingSolutions        Json
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 }
 
 model Requirement {
