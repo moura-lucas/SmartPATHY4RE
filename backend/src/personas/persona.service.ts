@@ -10,6 +10,8 @@ const generatedPersonaSchema = personaSchema.omit({ techExperienceLevel: true })
 export interface PersonaService {
   /** Returns null when the project does not exist. */
   generate(projectId: string): Promise<PersonaDto | null>;
+  /** Returns null when the project does not exist; `persona` is null when it has none yet. */
+  find(projectId: string): Promise<{ persona: PersonaDto | null } | null>;
 }
 
 export function createPersonaService(deps: {
@@ -38,6 +40,12 @@ export function createPersonaService(deps: {
         age: project.personaAge ?? generated.age,
         techExperienceLevel: project.techExperienceLevel,
       }); // AC3.6
+    },
+
+    async find(projectId) {
+      const project = await deps.projects.findById(projectId);
+      if (!project) return null;
+      return { persona: await deps.personas.findByProjectId(project.id) };
     },
   };
 }

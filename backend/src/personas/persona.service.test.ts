@@ -4,7 +4,7 @@ import { LlmError, LlmUnavailableError } from "../llm/errors.js";
 import { LlmService } from "../llm/llmService.js";
 import type { LlmProvider } from "../llm/provider.js";
 import type { ProjectRepository } from "../projects/project.repository.js";
-import { llmResponse, project } from "./persona.fixtures.js";
+import { buildPersonaDto, llmResponse, project } from "./persona.fixtures.js";
 import type { PersonaRepository } from "./persona.repository.js";
 import { createPersonaService } from "./persona.service.js";
 
@@ -97,5 +97,23 @@ describe("PersonaService.generate", () => {
 
     await expect(service().generate(project.id)).rejects.toBeInstanceOf(LlmUnavailableError);
     expect(personas.upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("PersonaService.find", () => {
+  it("returns the project's stored persona (AC4.1)", async () => {
+    personas.findByProjectId = vi.fn(async () => buildPersonaDto());
+
+    await expect(service().find(project.id)).resolves.toEqual({ persona: buildPersonaDto() });
+    expect(personas.findByProjectId).toHaveBeenCalledWith(project.id);
+  });
+
+  it("returns a null persona when the project has none yet (AC4.6)", async () => {
+    await expect(service().find(project.id)).resolves.toEqual({ persona: null });
+  });
+
+  it("returns null when the project does not exist (AC4.7)", async () => {
+    await expect(service().find("missing")).resolves.toBeNull();
+    expect(personas.findByProjectId).not.toHaveBeenCalled();
   });
 });

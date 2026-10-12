@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProject } from "@/lib/api";
+import { LEVEL_LABELS } from "@/lib/labels";
 import { GeneratePersonaButton } from "./GeneratePersonaButton";
-
-const LEVEL_LABELS = { low: "Low", moderate: "Moderate", high: "High" } as const;
 
 export default async function ProjectPage({
   params,

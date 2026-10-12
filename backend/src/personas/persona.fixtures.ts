@@ -1,4 +1,4 @@
-import type { Persona, ProjectDto } from "@smartpathy/shared";
+import type { Persona, PersonaDto, ProjectDto } from "@smartpathy/shared";
 
 // Test data shared by the persona tests.
 
@@ -47,6 +47,17 @@ export function buildPersona(): Persona {
       positiveCharacteristics: "Paper is always available, even offline.",
       negativeCharacteristics: "The legacy system is slow and confusing.",
     },
+  };
+}
+
+/** The persona as stored for `project`. */
+export function buildPersonaDto(): PersonaDto {
+  return {
+    ...buildPersona(),
+    id: "persona-1",
+    projectId: project.id,
+    createdAt: "2026-10-12T12:00:00.000Z",
+    updatedAt: "2026-10-12T12:00:00.000Z",
   };
 }
 

@@ -40,6 +40,17 @@ export async function getProject(id: string): Promise<ProjectDto | null> {
   return response.json();
 }
 
+/** AC4.1: null when the project has no persona yet (AC4.6). */
+export async function getPersona(projectId: string): Promise<PersonaDto | null> {
+  const response = await fetch(
+    `${API_URL}/projects/${encodeURIComponent(projectId)}/persona`,
+    { cache: "no-store" },
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`Unexpected status ${response.status}`);
+  return response.json();
+}
+
 /** AC3.1: the backend builds the prompt from the stored project data. */
 export async function generatePersona(projectId: string): Promise<PersonaDto> {
   const response = await fetch(
