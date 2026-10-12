@@ -3,6 +3,7 @@ import { GeminiProvider } from "./llm/geminiProvider.js";
 import { LlmService } from "./llm/llmService.js";
 import { createApp } from "./app.js";
 import { createPrismaClient } from "./lib/prisma.js";
+import { createPersonaRepository } from "./personas/persona.repository.js";
 import { createProjectRepository } from "./projects/project.repository.js";
 
 let env: Env;
@@ -20,6 +21,7 @@ const prisma = createPrismaClient(env.DATABASE_URL);
 const app = createApp({
   llm,
   projectRepository: createProjectRepository(prisma),
+  personaRepository: createPersonaRepository(prisma),
 });
 
 app.listen(env.PORT, () => {
