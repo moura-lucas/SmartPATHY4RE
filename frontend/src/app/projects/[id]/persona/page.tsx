@@ -1,15 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PATHY_SECTIONS, pathyAnswer, pathyFieldsOf } from "@smartpathy/shared";
-import { getPersona, getProject } from "@/lib/api";
+import { getPersona, getProject, getRequirements } from "@/lib/api";
 import { LEVEL_LABELS } from "@/lib/labels";
 import { GeneratePersonaButton } from "../GeneratePersonaButton";
+import { GenerateRequirementsButton } from "./GenerateRequirementsButton";
 
 export default async function PersonaPage({
   params,
 }: PageProps<"/projects/[id]/persona">) {
   const { id } = await params;
-  const [project, persona] = await Promise.all([getProject(id), getPersona(id)]);
+  const [project, persona, requirements] = await Promise.all([
+    getProject(id),
+    getPersona(id),
+    getRequirements(id),
+  ]);
   if (!project) notFound(); // AC4.7
 
   const backLink = (
@@ -87,24 +92,20 @@ export default async function PersonaPage({
       ))}
 
       {/* AC4.8 */}
-      <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800">
-        <button
-          type="button"
-          disabled
-          aria-describedby="generate-requirements-hint"
-          className="btn-primary"
+      <div className="mt-10 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+        <GenerateRequirementsButton
+          projectId={project.id}
+          hasRequirements={(requirements?.length ?? 0) > 0}
         >
-          Generate Requirements
-        </button>
-        <Link href={`/projects/${project.id}`} className="btn-secondary">
-          Back to project
-        </Link>
-        <p
-          id="generate-requirements-hint"
-          className="w-full text-sm text-zinc-600 dark:text-zinc-400"
-        >
-          Requirements generation is coming in US5.
-        </p>
+          {requirements && requirements.length > 0 && (
+            <Link href={`/projects/${project.id}/requirements`} className="btn-secondary">
+              View requirements
+            </Link>
+          )}
+          <Link href={`/projects/${project.id}`} className="btn-secondary">
+            Back to project
+          </Link>
+        </GenerateRequirementsButton>
       </div>
     </main>
   );
