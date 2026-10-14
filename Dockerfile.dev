@@ -1,0 +1,19 @@
+# Development image shared by the backend and frontend services.
+# The source code is bind-mounted by docker-compose; only the dependencies live in the image.
+FROM node:24-slim
+
+# Prisma needs OpenSSL at runtime.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+RUN chown node:node /app
+# Same UID as the host user (1000): files created in the bind mounts stay yours.
+USER node
+
+COPY --chown=node:node package.json package-lock.json ./
+COPY --chown=node:node shared/package.json shared/
+COPY --chown=node:node frontend/package.json frontend/
+COPY --chown=node:node backend/package.json backend/prisma.config.ts backend/
+COPY --chown=node:node backend/prisma backend/prisma
+RUN npm ci
