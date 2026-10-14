@@ -5,8 +5,13 @@ import type {
   ProjectDto,
 } from "@smartpathy/shared";
 
-export const API_URL =
+const PUBLIC_API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+export const API_URL =
+  typeof window === "undefined"
+    ? (process.env.API_INTERNAL_URL ?? PUBLIC_API_URL)
+    : PUBLIC_API_URL;
 
 export type CreateProjectResult =
   | { ok: true; project: ProjectDto }
@@ -41,7 +46,9 @@ export async function getProject(id: string): Promise<ProjectDto | null> {
 }
 
 /** AC4.1: null when the project has no persona yet (AC4.6). */
-export async function getPersona(projectId: string): Promise<PersonaDto | null> {
+export async function getPersona(
+  projectId: string,
+): Promise<PersonaDto | null> {
   const response = await fetch(
     `${API_URL}/projects/${encodeURIComponent(projectId)}/persona`,
     { cache: "no-store" },
