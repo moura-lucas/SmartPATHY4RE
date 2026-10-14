@@ -7,6 +7,7 @@ import { LlmService } from "../llm/llmService.js";
 import type { LlmProvider } from "../llm/provider.js";
 import type { ProjectRepository } from "../projects/project.repository.js";
 import { buildPersonaDto, llmResponse, project } from "./persona.fixtures.js";
+import type { RequirementRepository } from "../requirements/requirement.repository.js";
 import type { PersonaRepository } from "./persona.repository.js";
 
 let complete: LlmProvider["complete"];
@@ -15,7 +16,11 @@ let personaRepository: PersonaRepository;
 
 function app() {
   const llm = new LlmService({ complete }, { maxRetries: 0, baseDelayMs: 0 });
-  return createApp({ llm, projectRepository, personaRepository });
+  const requirementRepository: RequirementRepository = {
+    replaceAll: vi.fn(),
+    findByProjectId: vi.fn(),
+  };
+  return createApp({ llm, projectRepository, personaRepository, requirementRepository });
 }
 
 beforeEach(() => {

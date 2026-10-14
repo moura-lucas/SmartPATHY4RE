@@ -5,6 +5,7 @@ import { createApp } from "./app.js";
 import { createPrismaClient } from "./lib/prisma.js";
 import { createPersonaRepository } from "./personas/persona.repository.js";
 import { createProjectRepository } from "./projects/project.repository.js";
+import { createRequirementRepository } from "./requirements/requirement.repository.js";
 
 let env: Env;
 try {
@@ -22,6 +23,7 @@ const app = createApp({
   llm,
   projectRepository: createProjectRepository(prisma),
   personaRepository: createPersonaRepository(prisma),
+  requirementRepository: createRequirementRepository(prisma),
 });
 
 app.listen(env.PORT, () => {

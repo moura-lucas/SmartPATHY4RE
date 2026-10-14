@@ -7,11 +7,15 @@ import { personaRoutes } from "./personas/persona.routes.js";
 import { createPersonaService } from "./personas/persona.service.js";
 import type { ProjectRepository } from "./projects/project.repository.js";
 import { projectRoutes } from "./projects/project.routes.js";
+import type { RequirementRepository } from "./requirements/requirement.repository.js";
+import { requirementRoutes } from "./requirements/requirement.routes.js";
+import { createRequirementService } from "./requirements/requirement.service.js";
 
 export interface AppDeps {
   llm: LlmService;
   projectRepository: ProjectRepository;
   personaRepository: PersonaRepository;
+  requirementRepository: RequirementRepository;
 }
 
 export function createApp(deps: AppDeps) {
@@ -31,6 +35,17 @@ export function createApp(deps: AppDeps) {
         llm: deps.llm,
         projects: deps.projectRepository,
         personas: deps.personaRepository,
+      }),
+    ),
+  );
+  app.use(
+    "/projects",
+    requirementRoutes(
+      createRequirementService({
+        llm: deps.llm,
+        projects: deps.projectRepository,
+        personas: deps.personaRepository,
+        requirements: deps.requirementRepository,
       }),
     ),
   );
