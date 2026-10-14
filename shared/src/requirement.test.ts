@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { requirementSchema } from "./requirement.js";
+import {
+  generatedRequirementsSchema,
+  MAX_GENERATED_REQUIREMENTS,
+  requirementSchema,
+} from "./requirement.js";
 
 const validRequirement = {
   code: "FR1",
@@ -27,6 +31,56 @@ describe("requirementSchema", () => {
 
   it("requires at least one PATHY code in derivedFrom", () => {
     const result = requirementSchema.safeParse({ ...validRequirement, derivedFrom: [] });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("generatedRequirementsSchema (US5)", () => {
+  const nfr = {
+    ...validRequirement,
+    code: "NFR1",
+    type: "non_functional",
+    description: "The system shall respond in under 2 seconds.",
+  };
+
+  it("accepts functional and non-functional requirements with unique codes", () => {
+    const result = generatedRequirementsSchema.safeParse({
+      requirements: [validRequirement, { ...validRequirement, code: "FR2" }, nfr],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a list without non-functional requirements (AC5.3)", () => {
+    const result = generatedRequirementsSchema.safeParse({ requirements: [validRequirement] });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a list without functional requirements (AC5.3)", () => {
+    const result = generatedRequirementsSchema.safeParse({ requirements: [nfr] });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects duplicate codes (AC5.5)", () => {
+    const result = generatedRequirementsSchema.safeParse({
+      requirements: [validRequirement, { ...validRequirement }, nfr],
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["requirements", 1, "code"]);
+  });
+
+  it("rejects an invalid requirement inside the list (AC5.4)", () => {
+    const result = generatedRequirementsSchema.safeParse({
+      requirements: [{ ...validRequirement, moscow: "maybe" }, nfr],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("caps the number of generated requirements", () => {
+    const many = Array.from({ length: MAX_GENERATED_REQUIREMENTS }, (_, i) => ({
+      ...validRequirement,
+      code: `FR${i + 1}`,
+    }));
+    const result = generatedRequirementsSchema.safeParse({ requirements: [...many, nfr] });
     expect(result.success).toBe(false);
   });
 });

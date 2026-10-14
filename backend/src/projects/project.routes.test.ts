@@ -4,11 +4,16 @@ import type { ProjectDto } from "@smartpathy/shared";
 import { createApp } from "../app.js";
 import { LlmService } from "../llm/llmService.js";
 import type { PersonaRepository } from "../personas/persona.repository.js";
+import type { RequirementRepository } from "../requirements/requirement.repository.js";
 import type { ProjectRepository } from "./project.repository.js";
 
 const llm = new LlmService({ complete: async () => "{}" });
 const personaRepository: PersonaRepository = {
   upsert: vi.fn(),
+  findByProjectId: vi.fn(),
+};
+const requirementRepository: RequirementRepository = {
+  replaceAll: vi.fn(),
   findByProjectId: vi.fn(),
 };
 
@@ -34,7 +39,12 @@ const stored: ProjectDto = {
 let repository: ProjectRepository;
 
 function app() {
-  return createApp({ llm, projectRepository: repository, personaRepository });
+  return createApp({
+    llm,
+    projectRepository: repository,
+    personaRepository,
+    requirementRepository,
+  });
 }
 
 beforeEach(() => {

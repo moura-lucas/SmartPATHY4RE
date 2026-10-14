@@ -3,6 +3,7 @@ import type {
   CreateProjectInput,
   PersonaDto,
   ProjectDto,
+  RequirementDto,
 } from "@smartpathy/shared";
 
 const PUBLIC_API_URL =
@@ -72,4 +73,38 @@ export async function generatePersona(projectId: string): Promise<PersonaDto> {
     );
   }
   throw new Error("Could not generate the persona. Please try again.");
+}
+
+/** AC5.8: null when the project does not exist; empty when nothing was generated yet. */
+export async function getRequirements(
+  projectId: string,
+): Promise<RequirementDto[] | null> {
+  const response = await fetch(
+    `${API_URL}/projects/${encodeURIComponent(projectId)}/requirements`,
+    { cache: "no-store" },
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`Unexpected status ${response.status}`);
+  return response.json();
+}
+
+/** AC5.2: the backend builds the prompt from the stored project and persona. */
+export async function generateRequirements(
+  projectId: string,
+): Promise<RequirementDto[]> {
+  const response = await fetch(
+    `${API_URL}/projects/${encodeURIComponent(projectId)}/generate-requirements`,
+    { method: "POST" },
+  );
+  if (response.status === 201) return response.json();
+  if (response.status === 404) throw new Error("Project not found.");
+  if (response.status === 409) {
+    throw new Error("Generate the PATHY persona before generating requirements.");
+  }
+  if (response.status === 502) {
+    throw new Error(
+      "The AI could not generate the requirements right now. Please try again in a few moments.",
+    );
+  }
+  throw new Error("Could not generate the requirements. Please try again.");
 }

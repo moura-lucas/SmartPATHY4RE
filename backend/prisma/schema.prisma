@@ -46,8 +46,14 @@ model Requirement {
   id          String   @id @default(uuid())
   projectId   String
   project     Project  @relation(fields: [projectId], references: [id])
-  type        String   // "functional" | "non-functional"
+  code        String   @db.VarChar(16)
+  type        String   @db.VarChar(16) // "functional" | "non_functional"
   description String   @db.Text
-  priority    String?
+  moscow      String   @db.VarChar(8)
+  priority    String   @db.VarChar(8)
+  derivedFrom Json // PathyCode[]
+  position    Int // order in which PATHY4RE generated it
   createdAt   DateTime @default(now())
+
+  @@unique([projectId, code]) // AC5.5
 }
