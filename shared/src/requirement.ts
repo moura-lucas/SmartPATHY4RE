@@ -1,11 +1,6 @@
 import { z } from "zod";
 import { pathyCodeSchema } from "./pathy.js";
 
-/**
- * Requisito gerado pelo PATHY4RE (Figura 30): código, tipo, descrição,
- * MoSCoW, prioridade e rastreabilidade para os campos da persona (Derived From).
- */
-
 export const REQUIREMENT_TYPES = ["functional", "non_functional"] as const;
 export const requirementTypeSchema = z.enum(REQUIREMENT_TYPES);
 export type RequirementType = z.infer<typeof requirementTypeSchema>;
@@ -32,13 +27,72 @@ export const requirementSchema = z
     priority: prioritySchema,
     derivedFrom: z.array(pathyCodeSchema).min(1),
   })
-  .refine((req) => new RegExp(`^${CODE_PREFIX[req.type]}\\d+$`).test(req.code), {
-    message: "Code prefix does not match requirement type",
-    path: ["code"],
-  });
+  .refine(
+    (req) => new RegExp(`^${CODE_PREFIX[req.type]}\\d+$`).test(req.code),
+    {
+      message: "Code prefix does not match requirement type",
+      path: ["code"],
+    },
+  );
 export type Requirement = z.infer<typeof requirementSchema>;
 
+export const MAX_GENERATED_REQUIREMENTS = 30;
+
 export const requirementListSchema = z.object({
-  requirements: z.array(requirementSchema).min(1),
+  requirements: z
+    .array(requirementSchema)
+    .min(1)
+    .max(MAX_GENERATED_REQUIREMENTS),
 });
 export type RequirementList = z.infer<typeof requirementListSchema>;
+
+/** What PATHY4RE must return: both types (AC5.3) and unique codes (AC5.5). */
+export const generatedRequirementsSchema = requirementListSchema.superRefine(
+  ({ requirements }, ctx) => {
+    for (const type of REQUIREMENT_TYPES) {
+      if (!requirements.some((req) => req.type === type)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Expected at least one ${type} requirement`,
+          path: ["requirements"],
+        });
+      }
+    }
+    const seen = new Set<string>();
+    requirements.forEach((req, index) => {
+      if (seen.has(req.code)) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Duplicate requirement code ${req.code}`,
+          path: ["requirements", index, "code"],
+        });
+      }
+      seen.add(req.code);
+    });
+  },
+);
+
+export const REQUIREMENT_TYPE_LABELS: Record<RequirementType, string> = {
+  functional: "Functional",
+  non_functional: "Non-functional",
+};
+
+export const MOSCOW_LABELS: Record<Moscow, string> = {
+  must: "Must",
+  should: "Should",
+  could: "Could",
+  wont: "Won't",
+};
+
+export const PRIORITY_LABELS: Record<Priority, string> = {
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
+
+/** Requirement as returned by the API. */
+export type RequirementDto = Requirement & {
+  id: string;
+  projectId: string;
+  createdAt: string; // ISO 8601
+};
