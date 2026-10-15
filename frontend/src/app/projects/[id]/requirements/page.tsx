@@ -1,49 +1,106 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MOSCOW_LABELS, PRIORITY_LABELS } from "@smartpathy/shared";
-import { getProject, getRequirements } from "@/lib/api";
+import { getPersona, getProject, getRequirements } from "@/lib/api";
+import { GenerateRequirementsButton } from "../persona/GenerateRequirementsButton";
+import { Breadcrumb } from "./Breadcrumb";
+import { RequirementsSummary } from "./RequirementsSummary";
+import { RequirementsTable } from "./RequirementsTable";
 
-// Placeholder: the full requirements view is implemented in US6.
 export default async function RequirementsPage({
   params,
 }: PageProps<"/projects/[id]/requirements">) {
   const { id } = await params;
-  const [project, requirements] = await Promise.all([getProject(id), getRequirements(id)]);
+  // AC6.1: the backend already returns them sorted by code (AC6.5).
+  const [project, persona, requirements] = await Promise.all([
+    getProject(id),
+    getPersona(id),
+    getRequirements(id),
+  ]);
   if (!project || !requirements) notFound();
 
-  return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-10">
-      <Link
-        href={`/projects/${project.id}/persona`}
-        className="text-sm text-zinc-600 hover:underline dark:text-zinc-400"
-      >
-        ← Persona
-      </Link>
-      <p className="mt-4 text-sm text-zinc-600 break-words dark:text-zinc-400">
-        Requirements · {project.name}
-      </p>
-      <h1 className="mt-1 text-2xl font-semibold">Generated requirements</h1>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-        The full view is coming in US6.
-      </p>
+  const personaHref = `/projects/${project.id}/persona`;
+  const backToPersona = (
+    <Link href={personaHref} className="btn-secondary">
+      Back to persona
+    </Link>
+  );
 
-      {requirements.length === 0 ? (
-        <p className="mt-8">No requirements generated yet.</p>
-      ) : (
-        <ul className="mt-8 flex flex-col gap-4">
-          {requirements.map((req) => (
-            <li key={req.id} className="min-w-0">
-              <p className="whitespace-pre-wrap break-words">
-                <span className="font-mono text-sm font-semibold">{req.code}</span> {req.description}
-              </p>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                {MOSCOW_LABELS[req.moscow]} · {PRIORITY_LABELS[req.priority]} priority · Derived
-                from {req.derivedFrom.join(", ")}
-              </p>
-            </li>
-          ))}
-        </ul>
-      )}
+  // AC6.9
+  const header = (
+    <>
+      <Breadcrumb
+        items={[
+          { label: "Projects", href: "/" },
+          { label: project.name, href: `/projects/${project.id}` },
+          { label: "Persona", href: personaHref },
+          { label: "Requirements" },
+        ]}
+      />
+      <h1 className="mt-4 text-2xl font-semibold">Requirements</h1>
+    </>
+  );
+
+  // Requirements are generated from the persona, so there is nothing to show without one.
+  if (!persona) {
+    return (
+      <main className="mx-auto w-full max-w-5xl px-4 py-10">
+        {header}
+        <p className="mt-2 break-words text-zinc-600 dark:text-zinc-400">
+          The project <strong>{project.name}</strong> does not have a persona yet. Generate the
+          PATHY persona before generating requirements.
+        </p>
+        <div className="mt-6">
+          <Link href={personaHref} className="btn-primary">
+            Go to persona
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  // AC6.8
+  if (requirements.length === 0) {
+    return (
+      <main className="mx-auto w-full max-w-5xl px-4 py-10">
+        {header}
+        <p className="mt-2 mb-6 text-zinc-600 dark:text-zinc-400">
+          This project does not have requirements yet.
+        </p>
+        <GenerateRequirementsButton projectId={project.id} hasRequirements={false}>
+          {backToPersona}
+        </GenerateRequirementsButton>
+      </main>
+    );
+  }
+
+  const functional = requirements.filter((req) => req.type === "functional");
+  const nonFunctional = requirements.filter((req) => req.type === "non_functional");
+
+  return (
+    <main className="mx-auto w-full max-w-5xl px-4 py-10">
+      {header}
+
+      <RequirementsSummary
+        project={project}
+        persona={persona}
+        functionalCount={functional.length}
+        nonFunctionalCount={nonFunctional.length}
+      />
+
+      <RequirementsTable
+        id="functional-requirements"
+        title="Functional requirements"
+        requirements={functional}
+      />
+      <RequirementsTable
+        id="non-functional-requirements"
+        title="Non-functional requirements"
+        requirements={nonFunctional}
+      />
+
+      <div className="mt-10 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+        {backToPersona}
+      </div>
     </main>
   );
 }
