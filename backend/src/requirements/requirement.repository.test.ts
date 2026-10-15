@@ -56,7 +56,21 @@ describe("createRequirementRepository", () => {
     });
   });
 
-  it("lists the requirements in generation order", async () => {
+  it("lists the requirements sorted numerically by code (AC6.5)", async () => {
+    const { requirement, prisma } = fakePrisma();
+    const [fr1, , nfr1] = rows;
+    requirement.findMany.mockResolvedValueOnce([
+      { ...nfr1!, id: "nfr1", code: "NFR1" },
+      { ...fr1!, id: "fr10", code: "FR10", position: 0 },
+      { ...fr1!, id: "fr2", code: "FR2", position: 1 },
+    ]);
+
+    const found = await createRequirementRepository(prisma).findByProjectId("project-1");
+
+    expect(found.map((r) => r.code)).toEqual(["FR2", "FR10", "NFR1"]);
+  });
+
+  it("queries only the project's requirements", async () => {
     const { requirement, prisma } = fakePrisma();
 
     const found = await createRequirementRepository(prisma).findByProjectId("project-1");
