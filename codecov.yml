@@ -16,6 +16,10 @@ flags:
     paths:
       - backend/src/
     carryforward: true
+  frontend:
+    paths:
+      - frontend/src/
+    carryforward: true
 
 comment:
   layout: "diff, flags, files"

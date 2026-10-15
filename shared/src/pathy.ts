@@ -197,6 +197,16 @@ export function pathyFieldsOf<S extends PathySection>(
   );
 }
 
+/** Catalog field of a PATHY code. */
+export function pathyField(code: PathyCode): PathyField {
+  return PATHY_FIELDS.find((f) => f.code === code)!;
+}
+
+/** "C1 — Routine tasks using applications" (AC6.7). */
+export function pathyFieldLabel(code: PathyCode): string {
+  return `${code} — ${pathyField(code).label}`;
+}
+
 /** The persona's answer to a catalog field. */
 export function pathyAnswer(persona: Persona, { section, field }: PathyField): string {
   return (persona[section] as Record<string, string>)[field] ?? "";
