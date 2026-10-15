@@ -36,6 +36,16 @@ export const requirementSchema = z
   );
 export type Requirement = z.infer<typeof requirementSchema>;
 
+/**
+ * Orders codes by type (FR before NFR) and then numerically, so FR2 comes
+ * before FR10 (AC6.5).
+ */
+export function compareRequirementCodes(a: string, b: string): number {
+  const [, prefixA = "", numberA = "0"] = /^(\D*)(\d*)$/.exec(a) ?? [];
+  const [, prefixB = "", numberB = "0"] = /^(\D*)(\d*)$/.exec(b) ?? [];
+  return prefixA.localeCompare(prefixB) || Number(numberA) - Number(numberB);
+}
+
 export const MAX_GENERATED_REQUIREMENTS = 30;
 
 export const requirementListSchema = z.object({

@@ -1,4 +1,5 @@
 import {
+  compareRequirementCodes,
   requirementSchema,
   type Requirement,
   type RequirementDto,
@@ -9,10 +10,15 @@ import type {
 } from "../generated/prisma/client.js";
 
 export interface RequirementRepository {
-  /** Swaps all of the project's requirements in a single transaction (AC5.7 / AC5.8). */
+  /** Swaps all of the project's requirements in a single transaction (AC5.7 / AC5.8). Sorted by code. */
   replaceAll(projectId: string, requirements: Requirement[]): Promise<RequirementDto[]>;
-  /** In the order PATHY4RE generated them. */
+  /** Sorted by code: FR before NFR, then numerically (AC6.5). */
   findByProjectId(projectId: string): Promise<RequirementDto[]>;
+}
+
+// The numeric order of codes (FR2 before FR10) cannot be expressed in SQL on a string column.
+function sortedDtos(rows: RequirementRow[]): RequirementDto[] {
+  return rows.map(toDto).sort((a, b) => compareRequirementCodes(a.code, b.code));
 }
 
 function toDto(row: RequirementRow): RequirementDto {
@@ -54,10 +60,10 @@ export function createRequirementRepository(
         }),
         byPosition(projectId),
       ]);
-      return rows.map(toDto);
+      return sortedDtos(rows);
     },
     async findByProjectId(projectId) {
-      return (await byPosition(projectId)).map(toDto);
+      return sortedDtos(await byPosition(projectId));
     },
   };
 }
