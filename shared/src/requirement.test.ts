@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  compareRequirementCodes,
   generatedRequirementsSchema,
   MAX_GENERATED_REQUIREMENTS,
   requirementSchema,
@@ -82,5 +83,20 @@ describe("generatedRequirementsSchema (US5)", () => {
     }));
     const result = generatedRequirementsSchema.safeParse({ requirements: [...many, nfr] });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("compareRequirementCodes (US6)", () => {
+  it("sorts by the numeric part of the code (AC6.5)", () => {
+    expect(["FR10", "FR2", "FR1"].sort(compareRequirementCodes)).toEqual(["FR1", "FR2", "FR10"]);
+  });
+
+  it("puts functional codes before non-functional ones", () => {
+    expect(["NFR1", "FR10", "NFR2", "FR3"].sort(compareRequirementCodes)).toEqual([
+      "FR3",
+      "FR10",
+      "NFR1",
+      "NFR2",
+    ]);
   });
 });
