@@ -4,6 +4,8 @@ import {
   PATHY_FIELDS,
   PATHY_SECTIONS,
   pathyAnswer,
+  pathyField,
+  pathyFieldLabel,
   pathyFieldsOf,
   personaSchema,
   type Persona,
@@ -87,5 +89,16 @@ describe("catalog helpers (US4)", () => {
 
     expect(pathyAnswer(persona, w1!)).toBe("Nurse");
     expect(pathyAnswer(persona, s3)).toBe(persona.existingSolutions.negativeCharacteristics);
+  });
+});
+
+describe("traceability helpers (US6)", () => {
+  it("finds the catalog field of every PATHY code", () => {
+    for (const code of PATHY_CODES) expect(pathyField(code).code).toBe(code);
+    expect(pathyField("W1").field).toBe("profession");
+  });
+
+  it("labels a code with its catalog field (AC6.7)", () => {
+    expect(pathyFieldLabel("C1")).toBe("C1 — Routine tasks using applications");
   });
 });
