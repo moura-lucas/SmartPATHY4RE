@@ -30,6 +30,7 @@ beforeEach(() => {
   personaRepository = {
     upsert: vi.fn(),
     findByProjectId: vi.fn(async (): Promise<PersonaDto | null> => buildPersonaDto()),
+    updateSections: vi.fn(),
   };
   requirementRepository = {
     replaceAll: vi.fn(async (projectId) => buildRequirementDtos(projectId)),

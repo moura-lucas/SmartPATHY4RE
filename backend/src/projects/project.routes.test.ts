@@ -11,6 +11,7 @@ const llm = new LlmService({ complete: async () => "{}" });
 const personaRepository: PersonaRepository = {
   upsert: vi.fn(),
   findByProjectId: vi.fn(),
+  updateSections: vi.fn(),
 };
 const requirementRepository: RequirementRepository = {
   replaceAll: vi.fn(),

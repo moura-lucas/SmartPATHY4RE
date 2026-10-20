@@ -6,7 +6,7 @@ import { LlmError } from "../llm/errors.js";
 import { LlmService } from "../llm/llmService.js";
 import type { LlmProvider } from "../llm/provider.js";
 import type { ProjectRepository } from "../projects/project.repository.js";
-import { buildPersonaDto, llmResponse, project } from "./persona.fixtures.js";
+import { buildPersonaDto, buildSections, llmResponse, project } from "./persona.fixtures.js";
 import type { RequirementRepository } from "../requirements/requirement.repository.js";
 import type { PersonaRepository } from "./persona.repository.js";
 
@@ -40,6 +40,13 @@ beforeEach(() => {
       }),
     ),
     findByProjectId: vi.fn(async () => null),
+    updateSections: vi.fn(
+      async (_projectId, sections): Promise<PersonaDto> => ({
+        ...buildPersonaDto(),
+        ...sections,
+        updatedAt: "2026-10-19T12:00:00.000Z",
+      }),
+    ),
   };
 });
 
@@ -107,5 +114,63 @@ describe("GET /projects/:id/persona", () => {
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: "Project not found." });
     expect(personaRepository.findByProjectId).not.toHaveBeenCalled();
+  });
+});
+
+describe("PUT /projects/:id/persona", () => {
+  beforeEach(() => {
+    personaRepository.findByProjectId = vi.fn(async () => buildPersonaDto());
+  });
+
+  it("saves the edited sections and returns the updated persona (AC7.3)", async () => {
+    const sections = buildSections();
+    sections.context.routineTasks = "Night shifts in the emergency room.";
+
+    const res = await request(app()).put("/projects/project-1/persona").send(sections);
+
+    expect(res.status).toBe(200);
+    expect(personaRepository.updateSections).toHaveBeenCalledWith("project-1", sections);
+    expect(res.body.context.routineTasks).toBe("Night shifts in the emergency room.");
+    expect(res.body.updatedAt).toBe("2026-10-19T12:00:00.000Z");
+  });
+
+  it("responds 400 with the empty fields, using the shared schema (AC7.2)", async () => {
+    const sections = buildSections();
+    sections.who.profession = "   ";
+
+    const res = await request(app()).put("/projects/project-1/persona").send(sections);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Invalid persona data.",
+      fieldErrors: { "who.profession": ["This field is required."] },
+    });
+    expect(personaRepository.updateSections).not.toHaveBeenCalled();
+  });
+
+  it("responds 400 when a section is missing", async () => {
+    const { problems: _omit, ...sections } = buildSections();
+
+    const res = await request(app()).put("/projects/project-1/persona").send(sections);
+
+    expect(res.status).toBe(400);
+    expect(res.body.fieldErrors).toHaveProperty("problems");
+  });
+
+  it("responds 404 when the project has no persona", async () => {
+    personaRepository.findByProjectId = vi.fn(async () => null);
+
+    const res = await request(app()).put("/projects/project-1/persona").send(buildSections());
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Persona not found." });
+  });
+
+  it("responds 404 when the project does not exist", async () => {
+    const res = await request(app()).put("/projects/missing/persona").send(buildSections());
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Project not found." });
+    expect(personaRepository.updateSections).not.toHaveBeenCalled();
   });
 });

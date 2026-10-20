@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   compareRequirementCodes,
+  isRequirementsOutdated,
   generatedRequirementsSchema,
   MAX_GENERATED_REQUIREMENTS,
   requirementSchema,
@@ -98,5 +99,22 @@ describe("compareRequirementCodes (US6)", () => {
       "NFR1",
       "NFR2",
     ]);
+  });
+});
+
+describe("isRequirementsOutdated (US7)", () => {
+  const generated = [{ createdAt: "2026-10-14T12:00:00.000Z" }];
+
+  it("is true when the persona changed after the requirements were generated (AC7.5)", () => {
+    expect(isRequirementsOutdated({ updatedAt: "2026-10-15T09:00:00.000Z" }, generated)).toBe(true);
+  });
+
+  it("is false when the requirements are newer than the persona", () => {
+    expect(isRequirementsOutdated({ updatedAt: "2026-10-14T11:59:59.000Z" }, generated)).toBe(false);
+    expect(isRequirementsOutdated({ updatedAt: "2026-10-14T12:00:00.000Z" }, generated)).toBe(false);
+  });
+
+  it("is false when there are no requirements", () => {
+    expect(isRequirementsOutdated({ updatedAt: "2026-10-15T09:00:00.000Z" }, [])).toBe(false);
   });
 });

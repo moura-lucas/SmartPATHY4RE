@@ -1,4 +1,4 @@
-import { personaSchema, type PersonaDto } from "@smartpathy/shared";
+import { personaSchema, type PersonaDto, type PersonaSections } from "@smartpathy/shared";
 import type { LlmService } from "../llm/llmService.js";
 import type { ProjectRepository } from "../projects/project.repository.js";
 import { buildPersonaPrompt } from "./persona.prompt.js";
@@ -12,7 +12,14 @@ export interface PersonaService {
   generate(projectId: string): Promise<PersonaDto | null>;
   /** Returns null when the project does not exist; `persona` is null when it has none yet. */
   find(projectId: string): Promise<{ persona: PersonaDto | null } | null>;
+  /** AC7.3: name, age and level are kept; only the five sections change. */
+  updateSections(projectId: string, sections: PersonaSections): Promise<UpdatePersonaResult>;
 }
+
+export type UpdatePersonaResult =
+  | { status: "project_not_found" }
+  | { status: "persona_missing" }
+  | { status: "updated"; persona: PersonaDto };
 
 export function createPersonaService(deps: {
   llm: LlmService;
@@ -46,6 +53,14 @@ export function createPersonaService(deps: {
       const project = await deps.projects.findById(projectId);
       if (!project) return null;
       return { persona: await deps.personas.findByProjectId(project.id) };
+    },
+
+    async updateSections(projectId, sections) {
+      const project = await deps.projects.findById(projectId);
+      if (!project) return { status: "project_not_found" };
+      if (!(await deps.personas.findByProjectId(project.id))) return { status: "persona_missing" };
+      const persona = await deps.personas.updateSections(projectId, sections);
+      return { status: "updated", persona };
     },
   };
 }
