@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PATHY_SECTIONS, pathyAnswer, pathyFieldsOf } from "@smartpathy/shared";
+import { isRequirementsOutdated } from "@smartpathy/shared";
 import { getPersona, getProject, getRequirements } from "@/lib/api";
 import { LEVEL_LABELS } from "@/lib/labels";
 import { GeneratePersonaButton } from "../GeneratePersonaButton";
 import { GenerateRequirementsButton } from "./GenerateRequirementsButton";
+import { OutdatedRequirementsWarning } from "./OutdatedRequirementsWarning";
+import { PersonaEditor } from "./PersonaEditor";
 
 export default async function PersonaPage({
   params,
@@ -40,6 +42,8 @@ export default async function PersonaPage({
     );
   }
 
+  const hasRequirements = (requirements?.length ?? 0) > 0;
+
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-10">
       {backLink}
@@ -62,42 +66,20 @@ export default async function PersonaPage({
         </dl>
       </header>
 
-      {/* AC4.3 / AC4.4 / AC4.5: every catalog field, grouped and ordered as in PATHY_FIELDS. */}
-      {PATHY_SECTIONS.map(({ key, label }) => (
-        <section
-          key={key}
-          aria-labelledby={`section-${key}`}
-          className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-800"
-        >
-          <h2 id={`section-${key}`} className="text-lg font-semibold">
-            {label}
-          </h2>
-          <dl className="mt-4 flex flex-col gap-5">
-            {pathyFieldsOf(key).map((field) => (
-              <div key={field.code} className="min-w-0">
-                <dt className="flex flex-wrap items-baseline gap-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">
-                  <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100">
-                    {field.code}
-                  </span>
-                  {field.label}
-                </dt>
-                {/* AC4.9: full text, keeping line breaks and wrapping long words. */}
-                <dd className="mt-1 whitespace-pre-wrap break-words">
-                  {pathyAnswer(persona, field)}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      ))}
+      {/* AC4.3 / AC4.4 / AC4.5: every catalog field, grouped and ordered as in PATHY_FIELDS.
+          AC7.1: each section can be edited. */}
+      <PersonaEditor persona={persona} hasRequirements={hasRequirements} />
 
       {/* AC4.8 */}
       <div className="mt-10 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+        {requirements && isRequirementsOutdated(persona, requirements) && (
+          <OutdatedRequirementsWarning />
+        )}
         <GenerateRequirementsButton
           projectId={project.id}
-          hasRequirements={(requirements?.length ?? 0) > 0}
+          hasRequirements={hasRequirements}
         >
-          {requirements && requirements.length > 0 && (
+          {hasRequirements && (
             <Link href={`/projects/${project.id}/requirements`} className="btn-secondary">
               View requirements
             </Link>

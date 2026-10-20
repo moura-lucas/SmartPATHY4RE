@@ -2,6 +2,8 @@ import type {
   CreateProjectFieldErrors,
   CreateProjectInput,
   PersonaDto,
+  PersonaSections,
+  PersonaSectionsFieldErrors,
   ProjectDto,
   RequirementDto,
 } from "@smartpathy/shared";
@@ -57,6 +59,34 @@ export async function getPersona(
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`Unexpected status ${response.status}`);
   return response.json();
+}
+
+export type UpdatePersonaResult =
+  | { ok: true; persona: PersonaDto }
+  | { ok: false; fieldErrors: PersonaSectionsFieldErrors };
+
+/** AC7.2 / AC7.3: the backend validates with the same shared schema (400 = field errors). */
+export async function updatePersona(
+  projectId: string,
+  sections: PersonaSections,
+): Promise<UpdatePersonaResult> {
+  const response = await fetch(
+    `${API_URL}/projects/${encodeURIComponent(projectId)}/persona`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sections),
+    },
+  );
+  if (response.ok) return { ok: true, persona: await response.json() };
+  if (response.status === 400) {
+    const body = await response.json();
+    return { ok: false, fieldErrors: body.fieldErrors ?? {} };
+  }
+  if (response.status === 404) {
+    throw new Error("This persona no longer exists. Reload the page.");
+  }
+  throw new Error("Could not save the changes. Please try again.");
 }
 
 /** AC3.1: the backend builds the prompt from the stored project data. */
