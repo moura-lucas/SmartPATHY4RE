@@ -10,7 +10,7 @@ export const TECH_EXPERIENCE_LEVELS = ["low", "moderate", "high"] as const;
 export const techExperienceLevelSchema = z.enum(TECH_EXPERIENCE_LEVELS);
 export type TechExperienceLevel = z.infer<typeof techExperienceLevelSchema>;
 
-const answer = z.string().trim().min(1);
+const answer = z.string().trim().min(1, "This field is required.");
 
 export const personaSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -210,6 +210,39 @@ export function pathyFieldLabel(code: PathyCode): string {
 /** The persona's answer to a catalog field. */
 export function pathyAnswer(persona: Persona, { section, field }: PathyField): string {
   return (persona[section] as Record<string, string>)[field] ?? "";
+}
+
+/** The five editable sections (US7): the body of PUT /projects/:id/persona. */
+export const personaSectionsSchema = personaSchema.pick({
+  who: true,
+  context: true,
+  experienceWithTechnology: true,
+  problems: true,
+  existingSolutions: true,
+});
+export type PersonaSections = z.infer<typeof personaSectionsSchema>;
+
+/** Keyed by field path, e.g. "who.profession". */
+export type PersonaSectionsFieldErrors = Record<string, string[]>;
+
+export type PersonaSectionsValidation =
+  | { success: true; data: PersonaSections }
+  | { success: false; fieldErrors: PersonaSectionsFieldErrors };
+
+/** AC7.2: used by the frontend (before saving) and the backend (PUT /projects/:id/persona). */
+export function validatePersonaSections(input: unknown): PersonaSectionsValidation {
+  const result = personaSectionsSchema.safeParse(input ?? {});
+  if (result.success) return { success: true, data: result.data };
+  const fieldErrors: PersonaSectionsFieldErrors = {};
+  for (const issue of result.error.issues) {
+    (fieldErrors[issue.path.join(".")] ??= []).push(issue.message);
+  }
+  return { success: false, fieldErrors };
+}
+
+/** Field path used as the key of PersonaSectionsFieldErrors. */
+export function pathyFieldPath({ section, field }: PathyField): string {
+  return `${section}.${String(field)}`;
 }
 
 /** Persona as returned by the API. */

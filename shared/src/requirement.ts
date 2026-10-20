@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { pathyCodeSchema } from "./pathy.js";
+import { pathyCodeSchema, type PersonaDto } from "./pathy.js";
 
 export const REQUIREMENT_TYPES = ["functional", "non_functional"] as const;
 export const requirementTypeSchema = z.enum(REQUIREMENT_TYPES);
@@ -106,3 +106,16 @@ export type RequirementDto = Requirement & {
   projectId: string;
   createdAt: string; // ISO 8601
 };
+
+/**
+ * AC7.5: true when the persona changed after the requirements were generated,
+ * so they reflect a previous version of it.
+ */
+export function isRequirementsOutdated(
+  persona: Pick<PersonaDto, "updatedAt">,
+  requirements: Pick<RequirementDto, "createdAt">[],
+): boolean {
+  if (requirements.length === 0) return false;
+  const generatedAt = Math.min(...requirements.map((req) => Date.parse(req.createdAt)));
+  return Date.parse(persona.updatedAt) > generatedAt;
+}

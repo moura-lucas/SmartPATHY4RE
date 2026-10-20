@@ -6,6 +6,8 @@ import {
   pathyAnswer,
   pathyField,
   pathyFieldLabel,
+  pathyFieldPath,
+  validatePersonaSections,
   pathyFieldsOf,
   personaSchema,
   type Persona,
@@ -100,5 +102,50 @@ describe("traceability helpers (US6)", () => {
 
   it("labels a code with its catalog field (AC6.7)", () => {
     expect(pathyFieldLabel("C1")).toBe("C1 — Routine tasks using applications");
+  });
+});
+
+describe("validatePersonaSections (US7)", () => {
+  function sections() {
+    const { name: _n, age: _a, techExperienceLevel: _l, ...rest } = buildValidPersona();
+    return rest;
+  }
+
+  it("accepts the five sections and trims the answers", () => {
+    const input = sections();
+    input.who.profession = "  Head nurse  ";
+
+    const result = validatePersonaSections(input);
+
+    expect(result).toEqual({
+      success: true,
+      data: { ...input, who: { ...input.who, profession: "Head nurse" } },
+    });
+  });
+
+  it("keys the errors of empty fields by field path (AC7.2)", () => {
+    const input = sections();
+    input.who.profession = "   ";
+    input.problems.routineProblems = "";
+
+    const result = validatePersonaSections(input);
+
+    expect(result).toEqual({
+      success: false,
+      fieldErrors: {
+        "who.profession": ["This field is required."],
+        "problems.routineProblems": ["This field is required."],
+      },
+    });
+  });
+
+  it("rejects a body without the sections", () => {
+    const result = validatePersonaSections(undefined);
+    expect(result.success).toBe(false);
+    if (!result.success) expect(Object.keys(result.fieldErrors)).toContain("who");
+  });
+
+  it("builds the error key of a catalog field", () => {
+    expect(pathyFieldPath(PATHY_FIELDS[0])).toBe("who.profession");
   });
 });
