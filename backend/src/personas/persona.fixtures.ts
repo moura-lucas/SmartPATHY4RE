@@ -1,4 +1,4 @@
-import type { Persona, PersonaDto, ProjectDto } from "@smartpathy/shared";
+import type { Persona, PersonaDto, PersonaSections, ProjectDto } from "@smartpathy/shared";
 
 // Test data shared by the persona tests.
 
@@ -48,6 +48,12 @@ export function buildPersona(): Persona {
       negativeCharacteristics: "The legacy system is slow and confusing.",
     },
   };
+}
+
+/** The five editable sections of `buildPersona()`: the body of PUT /projects/:id/persona. */
+export function buildSections(): PersonaSections {
+  const { name: _name, age: _age, techExperienceLevel: _level, ...sections } = buildPersona();
+  return sections;
 }
 
 /** The persona as stored for `project`. */

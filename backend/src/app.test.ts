@@ -18,6 +18,9 @@ const personaRepository: PersonaRepository = {
     throw new Error("not used");
   },
   findByProjectId: async () => null,
+  updateSections: async () => {
+    throw new Error("not used");
+  },
 };
 const requirementRepository: RequirementRepository = {
   replaceAll: async () => {

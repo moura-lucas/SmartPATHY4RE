@@ -1,4 +1,9 @@
-import { personaSchema, type Persona, type PersonaDto } from "@smartpathy/shared";
+import {
+  personaSchema,
+  type Persona,
+  type PersonaDto,
+  type PersonaSections,
+} from "@smartpathy/shared";
 import type {
   PrismaClient,
   Persona as PersonaRow,
@@ -8,6 +13,8 @@ export interface PersonaRepository {
   /** Creates the project's persona, or replaces it when regenerating. */
   upsert(projectId: string, persona: Persona): Promise<PersonaDto>;
   findByProjectId(projectId: string): Promise<PersonaDto | null>;
+  /** Replaces the five PATHY sections of an existing persona (AC7.3). */
+  updateSections(projectId: string, sections: PersonaSections): Promise<PersonaDto>;
 }
 
 function toDto(row: PersonaRow): PersonaDto {
@@ -47,6 +54,19 @@ export function createPersonaRepository(
     async findByProjectId(projectId) {
       const row = await prisma.persona.findUnique({ where: { projectId } });
       return row ? toDto(row) : null;
+    },
+    async updateSections(projectId, sections) {
+      const row = await prisma.persona.update({
+        where: { projectId },
+        data: {
+          who: sections.who,
+          context: sections.context,
+          experienceWithTechnology: sections.experienceWithTechnology,
+          problems: sections.problems,
+          existingSolutions: sections.existingSolutions,
+        },
+      });
+      return toDto(row);
     },
   };
 }

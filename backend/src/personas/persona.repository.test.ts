@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "../generated/prisma/client.js";
-import { buildPersona } from "./persona.fixtures.js";
+import { buildPersona, buildSections } from "./persona.fixtures.js";
 import { createPersonaRepository } from "./persona.repository.js";
 
 const row = {
@@ -14,6 +14,7 @@ const row = {
 function fakePrisma() {
   const persona = {
     upsert: vi.fn(async () => row),
+    update: vi.fn(async () => row),
     findUnique: vi.fn(async (): Promise<typeof row | null> => row),
   };
   return { persona, prisma: { persona } as unknown as PrismaClient };
@@ -56,5 +57,17 @@ describe("createPersonaRepository", () => {
     await expect(
       createPersonaRepository(prisma).findByProjectId("project-1"),
     ).resolves.toBeNull();
+  });
+
+  it("replaces only the five PATHY sections of the persona (AC7.3)", async () => {
+    const { persona, prisma } = fakePrisma();
+
+    const saved = await createPersonaRepository(prisma).updateSections("project-1", buildSections());
+
+    expect(persona.update).toHaveBeenCalledWith({
+      where: { projectId: "project-1" },
+      data: buildSections(),
+    });
+    expect(saved.id).toBe("persona-1");
   });
 });

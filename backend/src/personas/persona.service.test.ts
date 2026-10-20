@@ -4,7 +4,7 @@ import { LlmError, LlmUnavailableError } from "../llm/errors.js";
 import { LlmService } from "../llm/llmService.js";
 import type { LlmProvider } from "../llm/provider.js";
 import type { ProjectRepository } from "../projects/project.repository.js";
-import { buildPersonaDto, llmResponse, project } from "./persona.fixtures.js";
+import { buildPersonaDto, buildSections, llmResponse, project } from "./persona.fixtures.js";
 import type { PersonaRepository } from "./persona.repository.js";
 import { createPersonaService } from "./persona.service.js";
 
@@ -36,6 +36,9 @@ beforeEach(() => {
       }),
     ),
     findByProjectId: vi.fn(async () => null),
+    updateSections: vi.fn(
+      async (_projectId, sections): Promise<PersonaDto> => ({ ...buildPersonaDto(), ...sections }),
+    ),
   };
 });
 
@@ -115,5 +118,31 @@ describe("PersonaService.find", () => {
   it("returns null when the project does not exist (AC4.7)", async () => {
     await expect(service().find("missing")).resolves.toBeNull();
     expect(personas.findByProjectId).not.toHaveBeenCalled();
+  });
+});
+
+describe("PersonaService.updateSections", () => {
+  it("saves the sections of an existing persona (AC7.3)", async () => {
+    personas.findByProjectId = vi.fn(async () => buildPersonaDto());
+    const sections = buildSections();
+    sections.who.profession = "Head nurse";
+
+    const result = await service().updateSections(project.id, sections);
+
+    expect(personas.updateSections).toHaveBeenCalledWith(project.id, sections);
+    expect(result).toEqual({
+      status: "updated",
+      persona: expect.objectContaining({ who: sections.who, name: "Maria" }),
+    });
+  });
+
+  it("reports a missing project or persona without saving", async () => {
+    await expect(service().updateSections("missing", buildSections())).resolves.toEqual({
+      status: "project_not_found",
+    });
+    await expect(service().updateSections(project.id, buildSections())).resolves.toEqual({
+      status: "persona_missing",
+    });
+    expect(personas.updateSections).not.toHaveBeenCalled();
   });
 });

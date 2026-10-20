@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { validatePersonaSections } from "@smartpathy/shared";
 import type { PersonaService } from "./persona.service.js";
 
 export function personaRoutes(service: PersonaService) {
@@ -29,6 +30,29 @@ export function personaRoutes(service: PersonaService) {
       return;
     }
     res.json(result.persona);
+  });
+
+  // AC7.2 / AC7.3: the shared schema is the same one the frontend checks before saving.
+  router.put("/:id/persona", async (req, res) => {
+    const validation = validatePersonaSections(req.body);
+    if (!validation.success) {
+      res.status(400).json({
+        error: "Invalid persona data.",
+        fieldErrors: validation.fieldErrors,
+      });
+      return;
+    }
+    const result = await service.updateSections(req.params.id, validation.data);
+    switch (result.status) {
+      case "project_not_found":
+        res.status(404).json({ error: "Project not found." });
+        return;
+      case "persona_missing":
+        res.status(404).json({ error: "Persona not found." });
+        return;
+      case "updated":
+        res.json(result.persona);
+    }
   });
 
   return router;
