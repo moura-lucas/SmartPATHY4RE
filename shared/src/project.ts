@@ -70,3 +70,30 @@ export interface ProjectDto {
   techExperienceLevel: TechExperienceLevel;
   createdAt: string; // ISO 8601
 }
+
+/** Where a project stands in the workflow (US8). */
+export const PROJECT_STAGES = ["created", "persona_generated", "requirements_generated"] as const;
+export type ProjectStage = (typeof PROJECT_STAGES)[number];
+
+export const PROJECT_STAGE_LABELS: Record<ProjectStage, string> = {
+  created: "Created",
+  persona_generated: "Persona generated",
+  requirements_generated: "Requirements generated",
+};
+
+/** AC8.1: derived from what the project already has. */
+export function projectStage(progress: {
+  hasPersona: boolean;
+  requirementsCount: number;
+}): ProjectStage {
+  if (progress.requirementsCount > 0) return "requirements_generated";
+  if (progress.hasPersona) return "persona_generated";
+  return "created";
+}
+
+/** A project with its progress, as listed on the dashboard (GET /projects). */
+export interface ProjectSummaryDto extends ProjectDto {
+  hasPersona: boolean;
+  requirementsCount: number;
+  stage: ProjectStage;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateCreateProject } from "./project.js";
+import { projectStage, validateCreateProject } from "./project.js";
 
 const valid = {
   name: "Clinic App",
@@ -101,5 +101,13 @@ describe("validateCreateProject", () => {
     expect(result.success).toBe(false);
     if (result.success) return;
     expect(result.fieldErrors.name).toBeDefined();
+  });
+});
+
+describe("projectStage (US8)", () => {
+  it("follows the workflow stages (AC8.1)", () => {
+    expect(projectStage({ hasPersona: false, requirementsCount: 0 })).toBe("created");
+    expect(projectStage({ hasPersona: true, requirementsCount: 0 })).toBe("persona_generated");
+    expect(projectStage({ hasPersona: true, requirementsCount: 16 })).toBe("requirements_generated");
   });
 });
