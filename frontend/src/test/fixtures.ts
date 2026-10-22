@@ -1,4 +1,10 @@
-import type { PersonaDto, ProjectDto, RequirementDto } from "@smartpathy/shared";
+import {
+  projectStage,
+  type PersonaDto,
+  type ProjectDto,
+  type ProjectSummaryDto,
+  type RequirementDto,
+} from "@smartpathy/shared";
 
 export function buildProject(overrides: Partial<ProjectDto> = {}): ProjectDto {
   return {
@@ -12,6 +18,19 @@ export function buildProject(overrides: Partial<ProjectDto> = {}): ProjectDto {
     techExperienceLevel: "low",
     createdAt: "2026-10-14T12:00:00.000Z",
     ...overrides,
+  };
+}
+
+export function buildProjectSummary(
+  overrides: Partial<Omit<ProjectSummaryDto, "stage">> = {},
+): ProjectSummaryDto {
+  const hasPersona = overrides.hasPersona ?? false;
+  const requirementsCount = overrides.requirementsCount ?? 0;
+  return {
+    ...buildProject(overrides),
+    hasPersona,
+    requirementsCount,
+    stage: projectStage({ hasPersona, requirementsCount }),
   };
 }
 

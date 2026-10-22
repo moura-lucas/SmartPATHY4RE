@@ -12,6 +12,7 @@ const projectRepository: ProjectRepository = {
     throw new Error("not used");
   },
   findById: async () => null,
+  listSummaries: async () => [],
 };
 const personaRepository: PersonaRepository = {
   upsert: async () => {

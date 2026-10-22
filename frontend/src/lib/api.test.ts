@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildPersona } from "@/test/fixtures";
-import { updatePersona } from "./api";
+import { listProjects, updatePersona } from "./api";
 
 function mockFetch(status: number, body: unknown) {
   const fetchMock = vi.fn(async () => new Response(JSON.stringify(body), { status }));
@@ -42,5 +42,23 @@ describe("updatePersona", () => {
 
     mockFetch(500, {});
     await expect(updatePersona("project-1", sections)).rejects.toThrow("Could not save");
+  });
+});
+
+describe("listProjects", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("fetches the project summaries without caching (AC8.1)", async () => {
+    const fetchMock = mockFetch(200, []);
+
+    await expect(listProjects()).resolves.toEqual([]);
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/projects$/), {
+      cache: "no-store",
+    });
+  });
+
+  it("throws when the backend fails", async () => {
+    mockFetch(500, {});
+    await expect(listProjects()).rejects.toThrow("Unexpected status 500");
   });
 });

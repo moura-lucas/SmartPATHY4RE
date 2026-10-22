@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
-import type { ProjectDto } from "@smartpathy/shared";
+import type { ProjectDto, ProjectSummaryDto } from "@smartpathy/shared";
 import { createApp } from "../app.js";
 import { LlmService } from "../llm/llmService.js";
 import type { PersonaRepository } from "../personas/persona.repository.js";
@@ -58,6 +58,9 @@ beforeEach(() => {
       personaAge: input.personaAge ?? null,
     })),
     findById: vi.fn(async (id) => (id === stored.id ? stored : null)),
+    listSummaries: vi.fn(async (): Promise<ProjectSummaryDto[]> => [
+      { ...stored, hasPersona: true, requirementsCount: 3, stage: "requirements_generated" },
+    ]),
   };
 });
 
@@ -167,5 +170,16 @@ describe("GET /projects/:id", () => {
 
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: "Project not found." });
+  });
+});
+
+describe("GET /projects", () => {
+  it("returns the project summaries for the dashboard (AC8.1)", async () => {
+    const res = await request(app()).get("/projects");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([
+      { ...stored, hasPersona: true, requirementsCount: 3, stage: "requirements_generated" },
+    ]);
   });
 });

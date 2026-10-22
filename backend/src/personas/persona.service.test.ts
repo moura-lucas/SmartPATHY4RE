@@ -24,6 +24,7 @@ beforeEach(() => {
   projects = {
     create: vi.fn(),
     findById: vi.fn(async (id) => (id === project.id ? project : null)),
+    listSummaries: vi.fn(),
   };
   personas = {
     upsert: vi.fn(

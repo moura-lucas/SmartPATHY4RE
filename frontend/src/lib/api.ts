@@ -5,6 +5,7 @@ import type {
   PersonaSections,
   PersonaSectionsFieldErrors,
   ProjectDto,
+  ProjectSummaryDto,
   RequirementDto,
 } from "@smartpathy/shared";
 
@@ -36,6 +37,13 @@ export async function createProject(
     return { ok: false, fieldErrors: body.fieldErrors ?? {} };
   }
   throw new Error(`Unexpected status ${response.status}`);
+}
+
+/** AC8.1: newest first, with each project's progress. */
+export async function listProjects(): Promise<ProjectSummaryDto[]> {
+  const response = await fetch(`${API_URL}/projects`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Unexpected status ${response.status}`);
+  return response.json();
 }
 
 export async function getProject(id: string): Promise<ProjectDto | null> {
