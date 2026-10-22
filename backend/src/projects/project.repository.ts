@@ -1,13 +1,17 @@
-import type {
-  CreateProjectInput,
-  ProjectDto,
-  TechExperienceLevel,
+import {
+  projectStage,
+  type CreateProjectInput,
+  type ProjectDto,
+  type ProjectSummaryDto,
+  type TechExperienceLevel,
 } from "@smartpathy/shared";
 import type { PrismaClient, Project } from "../generated/prisma/client.js";
 
 export interface ProjectRepository {
   create(input: CreateProjectInput): Promise<ProjectDto>;
   findById(id: string): Promise<ProjectDto | null>;
+  /** AC8.1: newest first, with each project's progress. */
+  listSummaries(): Promise<ProjectSummaryDto[]>;
 }
 
 function toDto(project: Project): ProjectDto {
@@ -40,6 +44,22 @@ export function createProjectRepository(
     async findById(id) {
       const project = await prisma.project.findUnique({ where: { id } });
       return project ? toDto(project) : null;
+    },
+    async listSummaries() {
+      const rows = await prisma.project.findMany({
+        orderBy: { createdAt: "desc" },
+        include: {
+          persona: { select: { id: true } },
+          _count: { select: { requirements: true } },
+        },
+      });
+      return rows.map(({ persona, _count, ...project }) => {
+        const progress = {
+          hasPersona: persona !== null,
+          requirementsCount: _count.requirements,
+        };
+        return { ...toDto(project), ...progress, stage: projectStage(progress) };
+      });
     },
   };
 }

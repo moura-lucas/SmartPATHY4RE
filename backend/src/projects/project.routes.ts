@@ -19,6 +19,11 @@ export function projectRoutes(repository: ProjectRepository) {
     res.status(201).location(`/projects/${project.id}`).json(project);
   });
 
+  // AC8.1 / AC8.2: the dashboard derives its indicators from this list.
+  router.get("/", async (_req, res) => {
+    res.json(await repository.listSummaries());
+  });
+
   router.get("/:id", async (req, res) => {
     const project = await repository.findById(req.params.id);
     if (!project) {

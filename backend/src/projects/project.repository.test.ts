@@ -18,6 +18,11 @@ function fakePrisma() {
   const project = {
     create: vi.fn(async () => row),
     findUnique: vi.fn(async (): Promise<typeof row | null> => row),
+    findMany: vi.fn(async () => [
+      { ...row, id: "project-2", persona: { id: "persona-2" }, _count: { requirements: 16 } },
+      { ...row, id: "project-3", persona: { id: "persona-3" }, _count: { requirements: 0 } },
+      { ...row, persona: null, _count: { requirements: 0 } },
+    ]),
   };
   return { project, prisma: { project } as unknown as PrismaClient };
 }
@@ -63,5 +68,33 @@ describe("createProjectRepository", () => {
     project.findUnique.mockResolvedValueOnce(null);
 
     expect(await createProjectRepository(prisma).findById("missing")).toBeNull();
+  });
+
+  it("lists the projects newest first with their progress (AC8.1)", async () => {
+    const { project, prisma } = fakePrisma();
+
+    const summaries = await createProjectRepository(prisma).listSummaries();
+
+    expect(project.findMany).toHaveBeenCalledWith({
+      orderBy: { createdAt: "desc" },
+      include: {
+        persona: { select: { id: true } },
+        _count: { select: { requirements: true } },
+      },
+    });
+    const progress = summaries.map(({ id, hasPersona, requirementsCount, stage }) => ({
+      id,
+      hasPersona,
+      requirementsCount,
+      stage,
+    }));
+    expect(progress).toEqual([
+      { id: "project-2", hasPersona: true, requirementsCount: 16, stage: "requirements_generated" },
+      { id: "project-3", hasPersona: true, requirementsCount: 0, stage: "persona_generated" },
+      { id: "project-1", hasPersona: false, requirementsCount: 0, stage: "created" },
+    ]);
+    expect(summaries[0]).toMatchObject({ name: "Clinic App", createdAt: "2026-10-09T12:00:00.000Z" });
+    expect(summaries[0]).not.toHaveProperty("_count");
+    expect(summaries[0]).not.toHaveProperty("persona");
   });
 });
