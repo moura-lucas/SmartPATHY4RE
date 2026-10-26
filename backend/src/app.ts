@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import type { LlmService } from "./llm/llmService.js";
+import { exportRoutes } from "./exports/export.routes.js";
+import { createExportService } from "./exports/export.service.js";
 import { errorHandler } from "./http/errorHandler.js";
 import type { PersonaRepository } from "./personas/persona.repository.js";
 import { personaRoutes } from "./personas/persona.routes.js";
@@ -43,6 +45,17 @@ export function createApp(deps: AppDeps) {
     requirementRoutes(
       createRequirementService({
         llm: deps.llm,
+        projects: deps.projectRepository,
+        personas: deps.personaRepository,
+        requirements: deps.requirementRepository,
+      }),
+    ),
+  );
+
+  app.use(
+    "/projects",
+    exportRoutes(
+      createExportService({
         projects: deps.projectRepository,
         personas: deps.personaRepository,
         requirements: deps.requirementRepository,

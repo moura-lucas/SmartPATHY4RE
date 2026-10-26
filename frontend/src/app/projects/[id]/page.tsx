@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProject } from "@/lib/api";
+import { getPersona, getProject } from "@/lib/api";
 import { LEVEL_LABELS } from "@/lib/labels";
+import { ExportActions } from "./ExportActions";
 import { GeneratePersonaButton } from "./GeneratePersonaButton";
 
 export default async function ProjectPage({
   params,
 }: PageProps<"/projects/[id]">) {
   const { id } = await params;
-  const project = await getProject(id);
+  const [project, persona] = await Promise.all([getProject(id), getPersona(id)]);
   if (!project) notFound();
 
   const details: [string, string][] = [
@@ -45,6 +46,8 @@ export default async function ProjectPage({
 
       {/* AC2.7: starts the persona generation flow (US3) for this project. */}
       <GeneratePersonaButton projectId={project.id} />
+
+      <ExportActions projectId={project.id} hasPersona={persona !== null} />
     </main>
   );
 }
