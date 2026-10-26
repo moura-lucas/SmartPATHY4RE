@@ -1,6 +1,7 @@
 import type {
   CreateProjectFieldErrors,
   CreateProjectInput,
+  ExportFormat,
   PersonaDto,
   PersonaSections,
   PersonaSectionsFieldErrors,
@@ -16,6 +17,14 @@ export const API_URL =
   typeof window === "undefined"
     ? (process.env.API_INTERNAL_URL ?? PUBLIC_API_URL)
     : PUBLIC_API_URL;
+
+/**
+ * AC9.1 / AC10.1: downloaded by the browser itself, so it always uses the public URL,
+ * even when rendered on the server (where API_URL may be a Docker-internal address).
+ */
+export function exportUrl(projectId: string, format: ExportFormat): string {
+  return `${PUBLIC_API_URL}/projects/${encodeURIComponent(projectId)}/export?format=${format}`;
+}
 
 export type CreateProjectResult =
   | { ok: true; project: ProjectDto }
