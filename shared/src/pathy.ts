@@ -10,6 +10,12 @@ export const TECH_EXPERIENCE_LEVELS = ["low", "moderate", "high"] as const;
 export const techExperienceLevelSchema = z.enum(TECH_EXPERIENCE_LEVELS);
 export type TechExperienceLevel = z.infer<typeof techExperienceLevelSchema>;
 
+export const TECH_EXPERIENCE_LEVEL_LABELS: Record<TechExperienceLevel, string> = {
+  low: "Low",
+  moderate: "Moderate",
+  high: "High",
+};
+
 const answer = z.string().trim().min(1, "This field is required.");
 
 export const personaSchema = z.object({
