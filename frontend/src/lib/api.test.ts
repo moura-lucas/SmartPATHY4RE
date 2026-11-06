@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildPersona } from "@/test/fixtures";
-import { listProjects, updatePersona } from "./api";
+import { generatePersona, generateRequirements, listProjects, updatePersona } from "./api";
+import { GENERATION_ERROR_MESSAGES, GenerationError, SERVER_UNREACHABLE_MESSAGE } from "./generation";
 
 function mockFetch(status: number, body: unknown) {
   const fetchMock = vi.fn(async () => new Response(JSON.stringify(body), { status }));
@@ -60,5 +61,62 @@ describe("listProjects", () => {
   it("throws when the backend fails", async () => {
     mockFetch(500, {});
     await expect(listProjects()).rejects.toThrow("Unexpected status 500");
+  });
+});
+
+describe("generation requests (US11)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("returns the generated persona on 201", async () => {
+    const fetchMock = mockFetch(201, buildPersona());
+
+    await expect(generatePersona("project-1")).resolves.toEqual(buildPersona());
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/projects\/project-1\/generate-persona$/),
+      { method: "POST" },
+    );
+  });
+
+  it.each(["ai_unavailable", "ai_rate_limited", "ai_invalid_response"] as const)(
+    "explains the cause %s in plain language (AC11.3)",
+    async (code) => {
+      mockFetch(502, { error: "Technical text", code });
+
+      const error = await generateRequirements("project-1").catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(GenerationError);
+      expect(error).toMatchObject({ code, message: GENERATION_ERROR_MESSAGES[code] });
+    },
+  );
+
+  it("treats a 502 without a known code as the AI being unavailable", async () => {
+    mockFetch(502, { error: "Bad gateway" });
+
+    await expect(generatePersona("project-1")).rejects.toMatchObject({
+      code: "ai_unavailable",
+    });
+  });
+
+  it("says when the server cannot be reached", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new TypeError("fetch failed"))));
+
+    await expect(generatePersona("project-1")).rejects.toMatchObject({
+      code: null,
+      message: SERVER_UNREACHABLE_MESSAGE,
+    });
+  });
+
+  it("asks for the persona first on 409 (AC5.1)", async () => {
+    mockFetch(409, { error: "No persona" });
+
+    await expect(generateRequirements("project-1")).rejects.toThrow(
+      "Generate the PATHY persona before generating requirements.",
+    );
+  });
+
+  it("reports a missing project on 404", async () => {
+    mockFetch(404, { error: "Project not found." });
+
+    await expect(generatePersona("project-1")).rejects.toThrow("Project not found.");
   });
 });
