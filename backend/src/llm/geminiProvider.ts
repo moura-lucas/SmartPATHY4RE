@@ -67,7 +67,9 @@ export class GeminiProvider implements LlmProvider {
 
     const candidate = data.candidates?.[0];
     if (candidate?.finishReason === "MAX_TOKENS") {
-      throw new LlmError("Gemini response was truncated", true);
+      throw new LlmError("Gemini response was truncated", true, {
+        kind: "invalid_response",
+      });
     }
 
     const text =
@@ -88,7 +90,11 @@ export class GeminiProvider implements LlmProvider {
 
 // Only the status goes into the message: the response body isn't logged or propagated
 function httpError(status: number): LlmError {
-  const retryable = status === 408 || status === 429 || status >= 500;
+  // 429 is not retried: with a daily quota, new attempts only spend more requests (AC11.3).
+  if (status === 429) {
+    return new LlmError("Gemini responded with HTTP 429", false, { kind: "rate_limited" });
+  }
+  const retryable = status === 408 || status >= 500;
   return new LlmError(`Gemini responded with HTTP ${status}`, retryable);
 }
 

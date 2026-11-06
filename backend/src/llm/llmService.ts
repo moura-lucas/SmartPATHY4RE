@@ -45,10 +45,14 @@ function parseAndValidate<T>(schema: z.ZodType<T>, raw: string): T {
   try {
     data = JSON.parse(raw);
   } catch {
-    throw new LlmError("LLM response is not a valid JSON", true);
+    throw new LlmError("LLM response is not a valid JSON", true, {
+      kind: "invalid_response",
+    });
   }
   const result = schema.safeParse(data);
   if (!result.success)
-    throw new LlmError("LLM response is not as the expected schema", true);
+    throw new LlmError("LLM response is not as the expected schema", true, {
+      kind: "invalid_response",
+    });
   return result.data;
 }

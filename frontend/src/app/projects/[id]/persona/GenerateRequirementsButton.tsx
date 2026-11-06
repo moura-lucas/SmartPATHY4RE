@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { GenerationProgress } from "@/app/_generation/GenerationProgress";
+import { useGeneration } from "@/app/_generation/useGeneration";
 import { generateRequirements } from "@/lib/api";
 
 export function GenerateRequirementsButton({
@@ -16,29 +18,18 @@ export function GenerateRequirementsButton({
 }) {
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // AC5.10: on failure the persona and the previous requirements stay intact.
+  const generation = useGeneration(async () => {
+    await generateRequirements(projectId);
+    router.push(`/projects/${projectId}/requirements`); // AC5.11
+  });
 
   function handleClick() {
-    if (generating) return;
+    if (generation.busy) return;
     // AC5.8: replacing the current requirements needs confirmation.
+    // Retry skips it: the user already confirmed (AC11.4).
     if (hasRequirements) dialogRef.current?.showModal();
-    else void generate();
-  }
-
-  async function generate() {
-    if (generating) return; // AC5.9: no duplicate requests
-    setGenerating(true);
-    setError(null);
-    try {
-      await generateRequirements(projectId);
-      router.push(`/projects/${projectId}/requirements`); // AC5.11
-      return; // keeps the button disabled during navigation
-    } catch (err) {
-      // AC5.10: the persona and the previous requirements stay intact.
-      setError(err instanceof Error ? err.message : "Could not generate the requirements.");
-    }
-    setGenerating(false);
+    else void generation.start();
   }
 
   return (
@@ -47,39 +38,19 @@ export function GenerateRequirementsButton({
         <button
           type="button"
           onClick={handleClick}
-          disabled={generating}
-          aria-busy={generating}
-          className="btn-primary gap-2"
+          disabled={generation.busy} // AC5.9 / AC11.1
+          aria-busy={generation.busy}
+          className="btn-primary"
         >
-          {generating && (
-            <span
-              aria-hidden="true"
-              className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-            />
-          )}
-          {generating ? "Generating requirements…" : "Generate Requirements"}
+          {generation.busy ? "Generating…" : "Generate Requirements"}
         </button>
         {children}
       </div>
 
-      {generating && (
-        <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">
-          This may take up to a minute.
-        </p>
-      )}
-
-      {error && (
-        <div
-          role="alert"
-          className="flex flex-wrap items-center gap-3 text-sm text-red-600 dark:text-red-400"
-        >
-          <span>{error}</span>
-          {/* The user already confirmed the replacement: retry directly. */}
-          <button type="button" onClick={generate} className="btn-secondary">
-            Try again
-          </button>
-        </div>
-      )}
+      <GenerationProgress
+        generation={generation}
+        stepMessage="Generating requirements from the persona…"
+      />
 
       <dialog
         ref={dialogRef}
@@ -102,7 +73,12 @@ export function GenerateRequirementsButton({
           <button type="submit" value="cancel" className="btn-secondary" autoFocus>
             Cancel
           </button>
-          <button type="submit" value="replace" onClick={() => void generate()} className="btn-primary">
+          <button
+            type="submit"
+            value="replace"
+            onClick={() => void generation.start()}
+            className="btn-primary"
+          >
             Replace requirements
           </button>
         </form>

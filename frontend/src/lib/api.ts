@@ -9,6 +9,12 @@ import type {
   ProjectSummaryDto,
   RequirementDto,
 } from "@smartpathy/shared";
+import { isGenerationErrorCode } from "@smartpathy/shared";
+import {
+  GENERATION_ERROR_MESSAGES,
+  GenerationError,
+  SERVER_UNREACHABLE_MESSAGE,
+} from "./generation";
 
 const PUBLIC_API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -108,18 +114,10 @@ export async function updatePersona(
 
 /** AC3.1: the backend builds the prompt from the stored project data. */
 export async function generatePersona(projectId: string): Promise<PersonaDto> {
-  const response = await fetch(
-    `${API_URL}/projects/${encodeURIComponent(projectId)}/generate-persona`,
-    { method: "POST" },
-  );
-  if (response.status === 201) return response.json();
-  if (response.status === 404) throw new Error("Project not found.");
-  if (response.status === 502) {
-    throw new Error(
-      "The AI could not generate the persona right now. Please try again in a few moments.",
-    );
-  }
-  throw new Error("Could not generate the persona. Please try again.");
+  return requestGeneration(`/projects/${encodeURIComponent(projectId)}/generate-persona`, {
+    notReady: null,
+    fallback: "Could not generate the persona. Please try again.",
+  });
 }
 
 /** AC5.8: null when the project does not exist; empty when nothing was generated yet. */
@@ -139,19 +137,41 @@ export async function getRequirements(
 export async function generateRequirements(
   projectId: string,
 ): Promise<RequirementDto[]> {
-  const response = await fetch(
-    `${API_URL}/projects/${encodeURIComponent(projectId)}/generate-requirements`,
-    { method: "POST" },
+  return requestGeneration(
+    `/projects/${encodeURIComponent(projectId)}/generate-requirements`,
+    {
+      notReady: "Generate the PATHY persona before generating requirements.",
+      fallback: "Could not generate the requirements. Please try again.",
+    },
   );
+}
+
+/**
+ * POSTs a generation request. Failures become a GenerationError whose message
+ * states the cause in plain language (AC11.3).
+ */
+async function requestGeneration<T>(
+  path: string,
+  messages: { notReady: string | null; fallback: string },
+): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, { method: "POST" });
+  } catch {
+    throw new GenerationError(SERVER_UNREACHABLE_MESSAGE);
+  }
   if (response.status === 201) return response.json();
-  if (response.status === 404) throw new Error("Project not found.");
-  if (response.status === 409) {
-    throw new Error("Generate the PATHY persona before generating requirements.");
+  if (response.status === 404) throw new GenerationError("Project not found.");
+  if (response.status === 409 && messages.notReady) {
+    throw new GenerationError(messages.notReady);
   }
   if (response.status === 502) {
-    throw new Error(
-      "The AI could not generate the requirements right now. Please try again in a few moments.",
-    );
+    const body: unknown = await response.json().catch(() => null);
+    const code =
+      body && typeof body === "object" && "code" in body && isGenerationErrorCode(body.code)
+        ? body.code
+        : "ai_unavailable";
+    throw new GenerationError(GENERATION_ERROR_MESSAGES[code], code);
   }
-  throw new Error("Could not generate the requirements. Please try again.");
+  throw new GenerationError(messages.fallback);
 }
