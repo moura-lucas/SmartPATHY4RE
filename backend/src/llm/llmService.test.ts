@@ -49,7 +49,7 @@ describe("LlmService.generateJson", () => {
 
   it("performs 4 attempts with increasing backoff and then raises LlmUnavailableError", async () => {
     const { provider, sleep, service } = setup();
-    provider.complete.mockRejectedValue(new LlmError("429", true));
+    provider.complete.mockRejectedValue(new LlmError("503", true));
     await expect(
       service.generateJson(Schema, "sys", "p"),
     ).rejects.toBeInstanceOf(LlmUnavailableError);
@@ -64,5 +64,33 @@ describe("LlmService.generateJson", () => {
       service.generateJson(Schema, "sys", "p"),
     ).rejects.toBeInstanceOf(LlmUnavailableError);
     expect(provider.complete).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports an invalid response as the cause when every attempt is invalid (AC11.3)", async () => {
+    const { provider, service } = setup();
+    provider.complete.mockResolvedValue("não é json");
+    await expect(service.generateJson(Schema, "sys", "p")).rejects.toMatchObject({
+      kind: "invalid_response",
+    });
+    expect(provider.complete).toHaveBeenCalledTimes(4);
+  });
+
+  it("reports the cause of the last attempt", async () => {
+    const { provider, service } = setup();
+    provider.complete
+      .mockResolvedValueOnce('{"nome":1}')
+      .mockRejectedValueOnce(new LlmError("429", false, { kind: "rate_limited" }));
+    await expect(service.generateJson(Schema, "sys", "p")).rejects.toMatchObject({
+      kind: "rate_limited",
+    });
+    expect(provider.complete).toHaveBeenCalledTimes(2);
+  });
+
+  it("treats an unknown failure as the service being unavailable", async () => {
+    const { provider, service } = setup();
+    provider.complete.mockRejectedValue(new Error("boom"));
+    await expect(service.generateJson(Schema, "sys", "p")).rejects.toMatchObject({
+      kind: "unavailable",
+    });
   });
 });

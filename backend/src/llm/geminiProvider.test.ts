@@ -50,18 +50,20 @@ describe("GeminiProvider", () => {
   });
 
   it.each([
-    [429, true],
-    [500, true],
-    [503, true],
-    [400, false],
-    [401, false],
-    [403, false],
-  ])("HTTP %i → retryable=%s", async (status, retryable) => {
+    [429, false, "rate_limited"],
+    [500, true, "unavailable"],
+    [503, true, "unavailable"],
+    [408, true, "unavailable"],
+    [400, false, "unavailable"],
+    [401, false, "unavailable"],
+    [403, false, "unavailable"],
+  ])("HTTP %i → retryable=%s, kind=%s (AC11.3)", async (status, retryable, kind) => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValue(new Response("x", { status }));
     await expect(make(fetchMock).complete(req)).rejects.toMatchObject({
       retryable,
+      kind,
     });
   });
 
@@ -90,6 +92,7 @@ describe("GeminiProvider", () => {
       .mockRejectedValue(new TypeError("fetch failed"));
     await expect(make(fetchMock).complete(req)).rejects.toMatchObject({
       retryable: true,
+      kind: "unavailable",
     });
   });
 
@@ -113,6 +116,7 @@ describe("GeminiProvider", () => {
       .mockResolvedValue(ok('{"a":', "MAX_TOKENS"));
     await expect(make(fetchMock).complete(req)).rejects.toMatchObject({
       retryable: true,
+      kind: "invalid_response",
     });
   });
 });

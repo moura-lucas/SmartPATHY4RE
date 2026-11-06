@@ -1,5 +1,21 @@
 import type { ErrorRequestHandler } from "express";
-import { LlmUnavailableError } from "../llm/errors.js";
+import type { GenerationErrorBody } from "@smartpathy/shared";
+import { LlmUnavailableError, type LlmFailureKind } from "../llm/errors.js";
+
+const GENERATION_ERRORS: Record<LlmFailureKind, GenerationErrorBody> = {
+  unavailable: {
+    code: "ai_unavailable",
+    error: "The AI service is unavailable at the moment. Please try again in a few moments.",
+  },
+  rate_limited: {
+    code: "ai_rate_limited",
+    error: "The AI usage limit has been reached. Please wait a while before trying again.",
+  },
+  invalid_response: {
+    code: "ai_invalid_response",
+    error: "The AI returned an invalid response. Please try again.",
+  },
+};
 
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   // Body that express.json() could not parse.
@@ -8,10 +24,8 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     return;
   }
   if (err instanceof LlmUnavailableError) {
-    res.status(502).json({
-      error:
-        "It was not possible to generate the content with AI at the moment. Please try again in a few moments.",
-    });
+    // AC11.3: always 502; the cause goes in `code`, never the technical details.
+    res.status(502).json(GENERATION_ERRORS[err.kind]);
     return;
   }
   console.error(
