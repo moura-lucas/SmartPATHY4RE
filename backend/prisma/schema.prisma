@@ -6,6 +6,8 @@
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
+  // Imports must still resolve after tsc compiles the client to dist/.
+  importFileExtension = "js"
 }
 
 datasource db {

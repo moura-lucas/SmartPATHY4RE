@@ -1,0 +1,40 @@
+# Production images: build with --target backend or --target frontend.
+FROM node:24-slim AS deps
+
+# Prisma needs OpenSSL at runtime.
+RUN apt-get update && apt-get install -y --no-install-recommends openssl \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+RUN chown node:node /app
+USER node
+
+COPY --chown=node:node package.json package-lock.json ./
+COPY --chown=node:node shared/package.json shared/
+COPY --chown=node:node frontend/package.json frontend/
+COPY --chown=node:node backend/package.json backend/prisma.config.ts backend/
+COPY --chown=node:node backend/prisma backend/prisma
+# Dev dependencies stay: the Prisma CLI runs the migrations at startup.
+RUN npm ci
+
+FROM deps AS backend
+COPY --chown=node:node shared shared
+COPY --chown=node:node backend backend
+RUN npm run build -w backend
+WORKDIR /app/backend
+ENV NODE_ENV=production
+EXPOSE 4000
+CMD ["sh", "-c", "npx prisma migrate deploy && exec node dist/index.js"]
+
+FROM deps AS frontend
+# Inlined in the browser bundle at build time: Caddy serves the API under this path.
+ARG NEXT_PUBLIC_API_URL=/api
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --chown=node:node shared shared
+COPY --chown=node:node frontend frontend
+RUN npm run build -w frontend
+WORKDIR /app/frontend
+ENV NODE_ENV=production
+EXPOSE 3000
+CMD ["/app/node_modules/.bin/next", "start"]

@@ -1,0 +1,67 @@
+# Production stack. The variables come from .env (see .env.prod.example).
+name: smartpathy-prod
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    # The only published ports: Docker bypasses ufw for anything listed here.
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?}
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:?}
+      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:?}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend: { condition: service_healthy }
+      frontend: { condition: service_started }
+
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?}
+      MYSQL_DATABASE: smartpathy
+      MYSQL_USER: smartpathy
+      MYSQL_PASSWORD: ${DB_PASSWORD:?}
+    volumes: ["db_data:/var/lib/mysql"]
+    healthcheck:
+      # TCP on 127.0.0.1: the temporary server of the first boot only accepts the socket.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: { context: ., dockerfile: Dockerfile.prod, target: backend }
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql://smartpathy:${DB_PASSWORD:?}@db:3306/smartpathy
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?}
+      LLM_MODEL: ${LLM_MODEL:-gemini-3.5-flash}
+      PORT: "4000"
+    depends_on:
+      db: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  frontend:
+    build: { context: ., dockerfile: Dockerfile.prod, target: frontend }
+    restart: unless-stopped
+    environment:
+      # Server Components call the backend directly, without going through Caddy.
+      API_INTERNAL_URL: http://backend:4000
+    depends_on:
+      backend: { condition: service_healthy }
+
+volumes:
+  db_data:
+  caddy_data:
+  caddy_config:
