@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { PATHY_FIELDS, type PersonaDto } from "@smartpathy/shared";
 import { createApp } from "../app.js";
+import { GENERATION_RATE_LIMIT } from "../http/rateLimit.js";
 import { LlmError } from "../llm/errors.js";
 import { LlmService } from "../llm/llmService.js";
 import type { LlmProvider } from "../llm/provider.js";
@@ -86,6 +87,24 @@ describe("POST /projects/:id/generate-persona", () => {
     expect(res.status).toBe(502);
     expect(res.text).not.toMatch(/401|Gemini/);
     expect(personaRepository.upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("generation rate limit", () => {
+  it("stops calling the LLM after the limit, counting all generation routes", async () => {
+    const llmCall = vi.fn(async () => llmResponse());
+    complete = llmCall;
+    const server = app();
+
+    for (let i = 0; i < GENERATION_RATE_LIMIT.limit - 1; i++) {
+      await request(server).post("/projects/project-1/generate-persona");
+    }
+    await request(server).post("/projects/project-1/generate-requirements");
+    const res = await request(server).post("/projects/project-1/generate-persona");
+
+    expect(res.status).toBe(429);
+    expect(res.body.code).toBe("ai_rate_limited");
+    expect(llmCall).toHaveBeenCalledTimes(GENERATION_RATE_LIMIT.limit - 1);
   });
 });
 

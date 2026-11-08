@@ -165,7 +165,8 @@ async function requestGeneration<T>(
   if (response.status === 409 && messages.notReady) {
     throw new GenerationError(messages.notReady);
   }
-  if (response.status === 502) {
+  // 502: the AI failed. 429: our own per-IP limit on generations.
+  if (response.status === 502 || response.status === 429) {
     const body: unknown = await response.json().catch(() => null);
     const code =
       body && typeof body === "object" && "code" in body && isGenerationErrorCode(body.code)

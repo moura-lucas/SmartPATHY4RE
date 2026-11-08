@@ -4,6 +4,7 @@ import type { LlmService } from "./llm/llmService.js";
 import { exportRoutes } from "./exports/export.routes.js";
 import { createExportService } from "./exports/export.service.js";
 import { errorHandler } from "./http/errorHandler.js";
+import { generationRateLimit } from "./http/rateLimit.js";
 import type { PersonaRepository } from "./personas/persona.repository.js";
 import { personaRoutes } from "./personas/persona.routes.js";
 import { createPersonaService } from "./personas/persona.service.js";
@@ -22,6 +23,9 @@ export interface AppDeps {
 
 export function createApp(deps: AppDeps) {
   const app = express();
+  app.set("trust proxy", 1); // Caddy: the rate limit must see the visitor's IP
+  // One limiter for both generation routes: they spend the same quota.
+  const generationLimit = generationRateLimit();
   app.use(cors());
   app.use(express.json());
 
@@ -38,6 +42,7 @@ export function createApp(deps: AppDeps) {
         projects: deps.projectRepository,
         personas: deps.personaRepository,
       }),
+      generationLimit,
     ),
   );
   app.use(
@@ -49,6 +54,7 @@ export function createApp(deps: AppDeps) {
         personas: deps.personaRepository,
         requirements: deps.requirementRepository,
       }),
+      generationLimit,
     ),
   );
 
