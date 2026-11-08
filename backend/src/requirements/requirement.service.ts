@@ -1,4 +1,6 @@
 import {
+  additionalRequirementsSchema,
+  canGenerateMoreRequirements,
   generatedRequirementsSchema,
   type PersonaDto,
   type RequirementDto,
@@ -6,13 +8,20 @@ import {
 import type { LlmService } from "../llm/llmService.js";
 import type { PersonaRepository } from "../personas/persona.repository.js";
 import type { ProjectRepository } from "../projects/project.repository.js";
-import { buildRequirementsPrompt } from "./requirement.prompt.js";
+import { buildAdditionalRequirementsPrompt, buildRequirementsPrompt } from "./requirement.prompt.js";
 import type { RequirementRepository } from "./requirement.repository.js";
 
 export type GenerateRequirementsResult =
   | { status: "project_not_found" }
   | { status: "no_personas" }
   | { status: "persona_not_found" }
+  | { status: "generated"; requirements: RequirementDto[] };
+
+export type GenerateMoreRequirementsResult =
+  | { status: "project_not_found" }
+  | { status: "persona_not_found" }
+  | { status: "no_requirements" }
+  | { status: "limit_reached" }
   | { status: "generated"; requirements: RequirementDto[] };
 
 export type ListRequirementsResult =
@@ -22,6 +31,8 @@ export type ListRequirementsResult =
 
 export interface RequirementService {
   generate(projectId: string, personaId: string): Promise<GenerateRequirementsResult>;
+  /** AC13.1: adds requirements to the ones the persona already has. */
+  generateMore(projectId: string, personaId: string): Promise<GenerateMoreRequirementsResult>;
   /** AC12.4: the requirements of one persona. */
   list(projectId: string, personaId: string): Promise<ListRequirementsResult>;
 }
@@ -56,6 +67,31 @@ export function createRequirementService(deps: {
         status: "generated",
         requirements: await deps.requirements.replaceAll(persona, requirements),
       };
+    },
+
+    async generateMore(projectId, personaId) {
+      const project = await deps.projects.findById(projectId);
+      if (!project) return { status: "project_not_found" };
+      const persona = await deps.personas.findById(project.id, personaId);
+      if (!persona) return { status: "persona_not_found" };
+
+      // The LLM is only called when the result can actually be saved.
+      const existing = await deps.requirements.findByPersonaId(persona.id);
+      if (existing.length === 0) return { status: "no_requirements" };
+      if (!canGenerateMoreRequirements(existing.length)) return { status: "limit_reached" };
+
+      // AC13.4: an invalid response counts as a failure and nothing is saved.
+      const { system, prompt } = buildAdditionalRequirementsPrompt(project, persona, existing);
+      const { requirements } = await deps.llm.generateJson(
+        additionalRequirementsSchema,
+        system,
+        prompt,
+      );
+
+      const result = await deps.requirements.append(persona, requirements);
+      return result.status === "appended"
+        ? { status: "generated", requirements: result.requirements }
+        : result;
     },
 
     async list(projectId, personaId) {

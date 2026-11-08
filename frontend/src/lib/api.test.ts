@@ -3,6 +3,7 @@ import { buildPersona } from "@/test/fixtures";
 import {
   createPersona,
   deletePersona,
+  generateMoreRequirements,
   generatePersona,
   generateRequirements,
   getPersonas,
@@ -196,6 +197,29 @@ describe("personas (US12)", () => {
 
     await expect(deletePersona("project-1", "persona-1")).rejects.toThrow(
       "A project must keep at least one persona.",
+    );
+  });
+});
+
+describe("generateMoreRequirements (US13)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("POSTs for the selected persona (AC13.1)", async () => {
+    const fetchMock = mockFetch(201, []);
+
+    await generateMoreRequirements("project-1", "persona-2");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/personas\/persona-2\/generate-more-requirements$/),
+      { method: "POST" },
+    );
+  });
+
+  it("explains that the limit was reached", async () => {
+    mockFetch(409, { error: "x" });
+
+    await expect(generateMoreRequirements("project-1", "persona-1")).rejects.toThrow(
+      "This persona has reached the requirements limit.",
     );
   });
 });

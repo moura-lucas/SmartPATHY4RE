@@ -31,6 +31,7 @@ beforeEach(() => {
   personaRepository = fakePersonaRepository([buildPersonaDto()]);
   requirementRepository = {
     replaceAll: vi.fn(),
+    append: vi.fn(),
     findByPersonaId: vi.fn(async () => buildRequirementDtos()),
   };
   return () => vi.useRealTimers();

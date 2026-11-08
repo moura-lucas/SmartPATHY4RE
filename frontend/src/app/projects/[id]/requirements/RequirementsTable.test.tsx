@@ -57,4 +57,19 @@ describe("RequirementsTable", () => {
     render(<RequirementsTable id="nfr" title="Non-functional requirements" requirements={[]} />);
     expect(screen.getByText("No non-functional requirements.")).toBeInTheDocument();
   });
+
+  it("marks only the newly generated requirements (AC13.5)", () => {
+    render(
+      <RequirementsTable
+        id="functional"
+        title="Functional requirements"
+        requirements={[
+          buildRequirement({ code: "FR1" }),
+          buildRequirement({ code: "FR2", isNew: true }),
+        ]}
+      />,
+    );
+
+    expect(screen.getAllByRole("rowheader").map((th) => th.textContent)).toEqual(["FR1", "FR2New"]);
+  });
 });

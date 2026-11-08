@@ -1,5 +1,7 @@
 import {
   compareRequirementCodes,
+  continueRequirementCodes,
+  MAX_REQUIREMENTS_PER_PERSONA,
   requirementSchema,
   type Requirement,
   type RequirementDto,
@@ -9,12 +11,24 @@ import type {
   Requirement as RequirementRow,
 } from "../generated/prisma/client.js";
 
+export type AppendRequirementsResult =
+  | { status: "appended"; requirements: RequirementDto[] }
+  | { status: "limit_reached" };
+
 export interface RequirementRepository {
   /** Swaps all of the persona's requirements in a single transaction (AC5.7 / AC5.8 / AC12.4). Sorted by code. */
   replaceAll(
     persona: { id: string; projectId: string },
     requirements: Requirement[],
   ): Promise<RequirementDto[]>;
+  /**
+   * AC13.1 / AC13.3: adds to the persona's requirements, continuing its numbering and
+   * marking only these as new (AC13.5). All or nothing (AC13.4). Sorted by code.
+   */
+  append(
+    persona: { id: string; projectId: string },
+    requirements: Requirement[],
+  ): Promise<AppendRequirementsResult>;
   /** Sorted by code: FR before NFR, then numerically (AC6.5). */
   findByPersonaId(personaId: string): Promise<RequirementDto[]>;
 }
@@ -32,6 +46,7 @@ function toDto(row: RequirementRow): RequirementDto {
     id: row.id,
     projectId: row.projectId,
     personaId: row.personaId,
+    isNew: row.isNew,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -66,6 +81,42 @@ export function createRequirementRepository(
         byPosition(personaId),
       ]);
       return sortedDtos(rows);
+    },
+    async append({ id: personaId, projectId }, requirements) {
+      return prisma.$transaction(async (tx) => {
+        // Locks the persona, so simultaneous generations cannot take the same codes.
+        await tx.$queryRaw`SELECT id FROM Persona WHERE id = ${personaId} FOR UPDATE`;
+        const existing = await tx.requirement.findMany({
+          where: { personaId },
+          select: { code: true, position: true },
+        });
+        if (existing.length + requirements.length > MAX_REQUIREMENTS_PER_PERSONA) {
+          return { status: "limit_reached" };
+        }
+
+        const firstPosition = Math.max(-1, ...existing.map(({ position }) => position)) + 1;
+        const coded = continueRequirementCodes(existing.map(({ code }) => code), requirements);
+        await tx.requirement.updateMany({
+          where: { personaId, isNew: true },
+          data: { isNew: false },
+        });
+        await tx.requirement.createMany({
+          data: coded.map((req, index) => ({
+            projectId,
+            personaId,
+            position: firstPosition + index,
+            isNew: true,
+            code: req.code,
+            type: req.type,
+            description: req.description,
+            moscow: req.moscow,
+            priority: req.priority,
+            derivedFrom: req.derivedFrom,
+          })),
+        });
+        const rows = await tx.requirement.findMany({ where: { personaId } });
+        return { status: "appended", requirements: sortedDtos(rows) };
+      });
     },
     async findByPersonaId(personaId) {
       return sortedDtos(await byPosition(personaId));

@@ -17,6 +17,7 @@ const personaRepository: PersonaRepository = {
 };
 const requirementRepository: RequirementRepository = {
   replaceAll: vi.fn(),
+  append: vi.fn(),
   findByPersonaId: vi.fn(),
 };
 

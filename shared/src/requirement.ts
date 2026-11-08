@@ -82,6 +82,49 @@ export const generatedRequirementsSchema = requirementListSchema.superRefine(
   },
 );
 
+/** AC13.1: each "Generate more requirements" adds at most this many. */
+export const ADDITIONAL_FUNCTIONAL_TARGET = 5;
+export const ADDITIONAL_NON_FUNCTIONAL_TARGET = 3;
+export const ADDITIONAL_REQUIREMENTS_BATCH =
+  ADDITIONAL_FUNCTIONAL_TARGET + ADDITIONAL_NON_FUNCTIONAL_TARGET;
+
+/** The initial 16 requirements plus three additional generations. */
+export const MAX_REQUIREMENTS_PER_PERSONA = 40;
+
+/** AC13.1 / AC13.4: the same validation as US5, limited to the size of a batch. */
+export const additionalRequirementsSchema = generatedRequirementsSchema.refine(
+  ({ requirements }) => requirements.length <= ADDITIONAL_REQUIREMENTS_BATCH,
+  {
+    message: `Expected at most ${ADDITIONAL_REQUIREMENTS_BATCH} requirements`,
+    path: ["requirements"],
+  },
+);
+
+/** Whether a persona with this many requirements has room for another batch. */
+export function canGenerateMoreRequirements(existingCount: number): boolean {
+  return (
+    existingCount > 0 &&
+    existingCount + ADDITIONAL_REQUIREMENTS_BATCH <= MAX_REQUIREMENTS_PER_PERSONA
+  );
+}
+
+/** AC13.3: renumbers new requirements so each type continues after its highest code in use. */
+export function continueRequirementCodes(
+  existingCodes: string[],
+  additions: Requirement[],
+): Requirement[] {
+  const highest = (type: RequirementType) =>
+    Math.max(
+      0,
+      ...existingCodes.flatMap((code) => {
+        const match = new RegExp(`^${CODE_PREFIX[type]}(\\d+)$`).exec(code);
+        return match ? [Number(match[1])] : [];
+      }),
+    );
+  const next = { functional: highest("functional"), non_functional: highest("non_functional") };
+  return additions.map((req) => ({ ...req, code: `${CODE_PREFIX[req.type]}${++next[req.type]}` }));
+}
+
 export const REQUIREMENT_TYPE_LABELS: Record<RequirementType, string> = {
   functional: "Functional",
   non_functional: "Non-functional",
@@ -105,6 +148,8 @@ export type RequirementDto = Requirement & {
   id: string;
   projectId: string;
   personaId: string;
+  /** AC13.5: part of the latest additional generation. */
+  isNew: boolean;
   createdAt: string; // ISO 8601
 };
 

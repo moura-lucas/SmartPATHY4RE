@@ -60,6 +60,7 @@ model Requirement {
   priority    String   @db.VarChar(8)
   derivedFrom Json // PathyCode[]
   position    Int // order in which PATHY4RE generated it
+  isNew       Boolean  @default(false) // AC13.5: part of the latest additional generation
   createdAt   DateTime @default(now())
 
   @@unique([personaId, code]) // AC5.5

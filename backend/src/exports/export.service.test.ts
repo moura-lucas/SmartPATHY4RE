@@ -30,6 +30,7 @@ beforeEach(() => {
   personas = fakePersonaRepository([buildPersonaDto()]);
   requirements = {
     replaceAll: vi.fn(),
+    append: vi.fn(),
     findByPersonaId: vi.fn(async () => buildRequirementDtos()),
   };
 });
