@@ -15,10 +15,12 @@ const projectRepository: ProjectRepository = {
   listSummaries: async () => [],
 };
 const personaRepository: PersonaRepository = {
-  upsert: async () => {
+  create: async () => {
     throw new Error("not used");
   },
-  findByProjectId: async () => null,
+  listByProjectId: async () => [],
+  findById: async () => null,
+  deleteUnlessLast: async () => "persona_not_found",
   updateSections: async () => {
     throw new Error("not used");
   },
@@ -27,7 +29,7 @@ const requirementRepository: RequirementRepository = {
   replaceAll: async () => {
     throw new Error("not used");
   },
-  findByProjectId: async () => [],
+  findByPersonaId: async () => [],
 };
 const deps = { llm, projectRepository, personaRepository, requirementRepository };
 

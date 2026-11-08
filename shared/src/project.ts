@@ -58,6 +58,29 @@ export function validateCreateProject(input: unknown): CreateProjectValidation {
   };
 }
 
+/** AC12.1: the profile of an additional persona; the application context comes from the project. */
+export const newPersonaSchema = createProjectSchema.pick({
+  personaName: true,
+  personaAge: true,
+  techExperienceLevel: true,
+});
+export type NewPersonaInput = z.infer<typeof newPersonaSchema>;
+export type NewPersonaFieldErrors = Partial<Record<keyof NewPersonaInput, string[]>>;
+
+export type NewPersonaValidation =
+  | { success: true; data: NewPersonaInput }
+  | { success: false; fieldErrors: NewPersonaFieldErrors };
+
+/** Used by the frontend (before submission) and the backend (POST /projects/:id/personas). */
+export function validateNewPersona(input: unknown): NewPersonaValidation {
+  const result = newPersonaSchema.safeParse(input ?? {});
+  if (result.success) return { success: true, data: result.data };
+  return {
+    success: false,
+    fieldErrors: z.flattenError(result.error).fieldErrors,
+  };
+}
+
 /** Design how the API returns data (JSON). */
 export interface ProjectDto {
   id: string;

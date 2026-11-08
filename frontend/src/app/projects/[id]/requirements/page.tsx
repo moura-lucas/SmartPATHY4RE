@@ -1,24 +1,24 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPersona, getProject, getRequirements } from "@/lib/api";
+import { getPersonas, getProject, getRequirements } from "@/lib/api";
+import { personaQuery, selectPersona } from "@/lib/personas";
 import { GenerateRequirementsButton } from "../persona/GenerateRequirementsButton";
+import { PersonaSwitcher } from "../persona/PersonaSwitcher";
 import { Breadcrumb } from "./Breadcrumb";
 import { RequirementsSummary } from "./RequirementsSummary";
 import { RequirementsTable } from "./RequirementsTable";
 
 export default async function RequirementsPage({
   params,
+  searchParams,
 }: PageProps<"/projects/[id]/requirements">) {
   const { id } = await params;
-  // AC6.1: the backend already returns them sorted by code (AC6.5).
-  const [project, persona, requirements] = await Promise.all([
-    getProject(id),
-    getPersona(id),
-    getRequirements(id),
-  ]);
-  if (!project || !requirements) notFound();
+  const { persona: requested } = await searchParams;
+  const [project, personas] = await Promise.all([getProject(id), getPersonas(id)]);
+  if (!project) notFound();
+  const persona = selectPersona(personas ?? [], requested);
 
-  const personaHref = `/projects/${project.id}/persona`;
+  const personaHref = `/projects/${project.id}/persona${persona ? personaQuery(persona.id) : ""}`;
   const backToPersona = (
     <Link href={personaHref} className="btn-secondary">
       Back to persona
@@ -58,15 +58,34 @@ export default async function RequirementsPage({
     );
   }
 
+  // AC6.1 / AC12.4: the selected persona's, already sorted by code by the backend (AC6.5).
+  const requirements = await getRequirements(project.id, persona.id);
+  if (!requirements) notFound();
+
+  // AC12.3
+  const switcher = (
+    <PersonaSwitcher
+      personas={personas ?? []}
+      selectedId={persona.id}
+      basePath={`/projects/${project.id}/requirements`}
+    />
+  );
+
   // AC6.8
   if (requirements.length === 0) {
     return (
       <main className="mx-auto w-full max-w-5xl px-4 py-10">
         {header}
+        {switcher}
         <p className="mt-2 mb-6 text-zinc-600 dark:text-zinc-400">
-          This project does not have requirements yet.
+          This persona does not have requirements yet.
         </p>
-        <GenerateRequirementsButton projectId={project.id} hasRequirements={false}>
+        <GenerateRequirementsButton
+          key={persona.id}
+          projectId={project.id}
+          personaId={persona.id}
+          hasRequirements={false}
+        >
           {backToPersona}
         </GenerateRequirementsButton>
       </main>
@@ -79,6 +98,7 @@ export default async function RequirementsPage({
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-10">
       {header}
+      {switcher}
 
       <RequirementsSummary
         project={project}

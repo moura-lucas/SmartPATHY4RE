@@ -9,13 +9,15 @@ import type { ProjectRepository } from "./project.repository.js";
 
 const llm = new LlmService({ complete: async () => "{}" });
 const personaRepository: PersonaRepository = {
-  upsert: vi.fn(),
-  findByProjectId: vi.fn(),
+  create: vi.fn(),
+  listByProjectId: vi.fn(),
+  findById: vi.fn(),
   updateSections: vi.fn(),
+  deleteUnlessLast: vi.fn(),
 };
 const requirementRepository: RequirementRepository = {
   replaceAll: vi.fn(),
-  findByProjectId: vi.fn(),
+  findByPersonaId: vi.fn(),
 };
 
 const valid = {

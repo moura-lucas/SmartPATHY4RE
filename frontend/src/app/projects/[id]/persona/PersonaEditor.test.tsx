@@ -68,7 +68,7 @@ describe("PersonaEditor", () => {
   });
 
   it("saves, returns to read-only with the new values and confirms (AC7.3)", async () => {
-    vi.mocked(updatePersona).mockImplementation(async (_id, sections) => ({
+    vi.mocked(updatePersona).mockImplementation(async (_projectId, _personaId, sections) => ({
       ok: true,
       persona: { ...buildPersona(), ...sections },
     }));
@@ -80,7 +80,8 @@ describe("PersonaEditor", () => {
     await user.type(profession, "  Head nurse ");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    const [projectId, sections] = vi.mocked(updatePersona).mock.calls[0]!;
+    const [projectId, personaId, sections] = vi.mocked(updatePersona).mock.calls[0]!;
+    expect(personaId).toBe("persona-1");
     expect(projectId).toBe("project-1");
     expect(sections.who.profession).toBe("Head nurse");
     expect(sections.problems).toEqual(buildPersona().problems);

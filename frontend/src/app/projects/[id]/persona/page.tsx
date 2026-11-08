@@ -1,23 +1,27 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isRequirementsOutdated } from "@smartpathy/shared";
-import { getPersona, getProject, getRequirements } from "@/lib/api";
+import { GenerationLock } from "@/app/_generation/GenerationLock";
+import { getPersonas, getProject, getRequirements } from "@/lib/api";
 import { LEVEL_LABELS } from "@/lib/labels";
+import { personaQuery, selectPersona } from "@/lib/personas";
 import { GeneratePersonaButton } from "../GeneratePersonaButton";
+import { DeletePersonaButton } from "./DeletePersonaButton";
 import { GenerateRequirementsButton } from "./GenerateRequirementsButton";
+import { NewPersonaButton } from "./NewPersonaButton";
 import { OutdatedRequirementsWarning } from "./OutdatedRequirementsWarning";
 import { PersonaEditor } from "./PersonaEditor";
+import { PersonaSwitcher } from "./PersonaSwitcher";
 
 export default async function PersonaPage({
   params,
+  searchParams,
 }: PageProps<"/projects/[id]/persona">) {
   const { id } = await params;
-  const [project, persona, requirements] = await Promise.all([
-    getProject(id),
-    getPersona(id),
-    getRequirements(id),
-  ]);
+  const { persona: requested } = await searchParams;
+  const [project, personas] = await Promise.all([getProject(id), getPersonas(id)]);
   if (!project) notFound(); // AC4.7
+  const persona = selectPersona(personas ?? [], requested);
 
   const backLink = (
     <Link
@@ -42,6 +46,8 @@ export default async function PersonaPage({
     );
   }
 
+  // AC12.4: everything below refers to the selected persona.
+  const requirements = await getRequirements(project.id, persona.id);
   const hasRequirements = (requirements?.length ?? 0) > 0;
 
   return (
@@ -66,29 +72,56 @@ export default async function PersonaPage({
         </dl>
       </header>
 
-      {/* AC4.3 / AC4.4 / AC4.5: every catalog field, grouped and ordered as in PATHY_FIELDS.
-          AC7.1: each section can be edited. */}
-      <PersonaEditor persona={persona} hasRequirements={hasRequirements} />
+      <GenerationLock>
+        {/* AC12.3 */}
+        <PersonaSwitcher
+          personas={personas ?? []}
+          selectedId={persona.id}
+          basePath={`/projects/${project.id}/persona`}
+        />
 
-      {/* AC4.8 */}
-      <div className="mt-10 border-t border-zinc-200 pt-6 dark:border-zinc-800">
-        {requirements && isRequirementsOutdated(persona, requirements) && (
-          <OutdatedRequirementsWarning />
-        )}
-        <GenerateRequirementsButton
-          projectId={project.id}
-          hasRequirements={hasRequirements}
-        >
-          {hasRequirements && (
-            <Link href={`/projects/${project.id}/requirements`} className="btn-secondary">
-              View requirements
-            </Link>
+        <div className="mt-6">
+          {/* The key ends the "generated" state: the new persona opens on this same page. */}
+          <NewPersonaButton key={persona.id} projectId={project.id}>
+            <DeletePersonaButton
+              key={persona.id}
+              projectId={project.id}
+              personaId={persona.id}
+              personaName={persona.name}
+              isLast={personas?.length === 1}
+            />
+          </NewPersonaButton>
+        </div>
+
+        {/* AC4.3 / AC4.4 / AC4.5: every catalog field, grouped and ordered as in PATHY_FIELDS.
+            AC7.1: each section can be edited. The key resets the editor when switching personas. */}
+        <PersonaEditor key={persona.id} persona={persona} hasRequirements={hasRequirements} />
+
+        {/* AC4.8 */}
+        <div className="mt-10 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+          {requirements && isRequirementsOutdated(persona, requirements) && (
+            <OutdatedRequirementsWarning />
           )}
-          <Link href={`/projects/${project.id}`} className="btn-secondary">
-            Back to project
-          </Link>
-        </GenerateRequirementsButton>
-      </div>
+          <GenerateRequirementsButton
+            key={persona.id}
+            projectId={project.id}
+            personaId={persona.id}
+            hasRequirements={hasRequirements}
+          >
+            {hasRequirements && (
+              <Link
+                href={`/projects/${project.id}/requirements${personaQuery(persona.id)}`}
+                className="btn-secondary"
+              >
+                View requirements
+              </Link>
+            )}
+            <Link href={`/projects/${project.id}`} className="btn-secondary">
+              Back to project
+            </Link>
+          </GenerateRequirementsButton>
+        </div>
+      </GenerationLock>
     </main>
   );
 }

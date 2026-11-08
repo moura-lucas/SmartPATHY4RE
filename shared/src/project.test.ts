@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { projectStage, validateCreateProject } from "./project.js";
+import { projectStage, validateCreateProject,
+  validateNewPersona,
+} from "./project.js";
 
 const valid = {
   name: "Clinic App",
@@ -109,5 +111,36 @@ describe("projectStage (US8)", () => {
     expect(projectStage({ hasPersona: false, requirementsCount: 0 })).toBe("created");
     expect(projectStage({ hasPersona: true, requirementsCount: 0 })).toBe("persona_generated");
     expect(projectStage({ hasPersona: true, requirementsCount: 16 })).toBe("requirements_generated");
+  });
+});
+
+describe("validateNewPersona (AC12.1)", () => {
+  it("accepts only the experience level", () => {
+    expect(validateNewPersona({ techExperienceLevel: "high" })).toEqual({
+      success: true,
+      data: { techExperienceLevel: "high" },
+    });
+  });
+
+  it("accepts an optional name and age", () => {
+    const result = validateNewPersona({
+      techExperienceLevel: "low",
+      personaName: "  Ana  ",
+      personaAge: 34,
+    });
+    expect(result).toEqual({
+      success: true,
+      data: { techExperienceLevel: "low", personaName: "Ana", personaAge: 34 },
+    });
+  });
+
+  it("requires the experience level", () => {
+    const result = validateNewPersona({});
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.fieldErrors.techExperienceLevel).toBeDefined();
+  });
+
+  it("rejects an age out of range", () => {
+    expect(validateNewPersona({ techExperienceLevel: "low", personaAge: 200 }).success).toBe(false);
   });
 });

@@ -7,6 +7,7 @@ const rows = buildRequirements().map((req, position) => ({
   ...req,
   id: `requirement-${position + 1}`,
   projectId: "project-1",
+  personaId: "persona-1",
   position,
   createdAt: new Date("2026-10-14T12:00:00.000Z"),
 }));
@@ -30,19 +31,20 @@ function fakePrisma() {
 }
 
 describe("createRequirementRepository", () => {
-  it("swaps the project's requirements in a single transaction (AC5.7 / AC5.8)", async () => {
+  it("swaps only the persona's requirements in a single transaction (AC5.7 / AC5.8 / AC12.4)", async () => {
     const { requirement, $transaction, prisma } = fakePrisma();
 
     const saved = await createRequirementRepository(prisma).replaceAll(
-      "project-1",
+      { id: "persona-1", projectId: "project-1" },
       buildRequirements(),
     );
 
     expect($transaction).toHaveBeenCalledTimes(1);
-    expect(requirement.deleteMany).toHaveBeenCalledWith({ where: { projectId: "project-1" } });
+    expect(requirement.deleteMany).toHaveBeenCalledWith({ where: { personaId: "persona-1" } });
     expect(requirement.createMany).toHaveBeenCalledWith({
       data: buildRequirements().map((req, position) => ({
         projectId: "project-1",
+        personaId: "persona-1",
         position,
         ...req,
       })),
@@ -52,6 +54,7 @@ describe("createRequirementRepository", () => {
       ...buildRequirements()[0],
       id: "requirement-1",
       projectId: "project-1",
+      personaId: "persona-1",
       createdAt: "2026-10-14T12:00:00.000Z",
     });
   });
@@ -65,18 +68,18 @@ describe("createRequirementRepository", () => {
       { ...fr1!, id: "fr2", code: "FR2", position: 1 },
     ]);
 
-    const found = await createRequirementRepository(prisma).findByProjectId("project-1");
+    const found = await createRequirementRepository(prisma).findByPersonaId("persona-1");
 
     expect(found.map((r) => r.code)).toEqual(["FR2", "FR10", "NFR1"]);
   });
 
-  it("queries only the project's requirements", async () => {
+  it("queries only the persona's requirements (AC12.4)", async () => {
     const { requirement, prisma } = fakePrisma();
 
-    const found = await createRequirementRepository(prisma).findByProjectId("project-1");
+    const found = await createRequirementRepository(prisma).findByPersonaId("persona-1");
 
     expect(requirement.findMany).toHaveBeenCalledWith({
-      where: { projectId: "project-1" },
+      where: { personaId: "persona-1" },
       orderBy: { position: "asc" },
     });
     expect(found.map((r) => r.code)).toEqual(["FR1", "FR2", "NFR1"]);

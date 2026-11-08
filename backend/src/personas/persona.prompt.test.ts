@@ -14,13 +14,15 @@ const project: ProjectDto = {
   createdAt: "2026-10-09T12:00:00.000Z",
 };
 
+const profile = { techExperienceLevel: "low" } as const;
+
 describe("buildPersonaPrompt", () => {
   it("uses the SmartPATHY system prompt", () => {
-    expect(buildPersonaPrompt(project).system).toBe(PERSONA_SYSTEM_PROMPT);
+    expect(buildPersonaPrompt(project, profile).system).toBe(PERSONA_SYSTEM_PROMPT);
   });
 
   it("includes the application context (AC3.1)", () => {
-    const { prompt } = buildPersonaPrompt(project);
+    const { prompt } = buildPersonaPrompt(project, profile);
 
     expect(prompt).toContain("Clinic App");
     expect(prompt).toContain("Healthcare");
@@ -29,16 +31,16 @@ describe("buildPersonaPrompt", () => {
   });
 
   it("marks the additional context as absent when it was not provided", () => {
-    const { prompt } = buildPersonaPrompt({ ...project, additionalContext: null });
+    const { prompt } = buildPersonaPrompt({ ...project, additionalContext: null }, profile);
 
     expect(prompt).toContain("Additional context: none");
   });
 
   it("instructs the LLM to use exactly the provided name and age (AC3.3)", () => {
-    const { prompt } = buildPersonaPrompt({
-      ...project,
-      personaName: "Ana",
-      personaAge: 34,
+    const { prompt } = buildPersonaPrompt(project, {
+      name: "Ana",
+      age: 34,
+      techExperienceLevel: "low",
     });
 
     expect(prompt).toContain('Name: "Ana" (use exactly this value)');
@@ -48,7 +50,7 @@ describe("buildPersonaPrompt", () => {
   });
 
   it("asks the LLM to suggest the name and age when omitted (AC3.4)", () => {
-    const { prompt } = buildPersonaPrompt(project);
+    const { prompt } = buildPersonaPrompt(project, profile);
 
     expect(prompt).toContain("Suggest a name consistent with the application context");
     expect(prompt).toContain("Suggest an age consistent with the application context");
@@ -61,7 +63,7 @@ describe("buildPersonaPrompt", () => {
   ] as const)(
     "reflects the %s experience level in E1 to E7 (AC3.5)",
     (level, guidance) => {
-      const { prompt } = buildPersonaPrompt({ ...project, techExperienceLevel: level });
+      const { prompt } = buildPersonaPrompt(project, { techExperienceLevel: level });
 
       expect(prompt).toContain(`Technology experience level: ${level}`);
       expect(prompt).toContain("Experience with Technology (E1 to E7) MUST reflect");
@@ -70,10 +72,20 @@ describe("buildPersonaPrompt", () => {
   );
 
   it("lists every PATHY field of the template (AC3.2)", () => {
-    const { prompt } = buildPersonaPrompt(project);
+    const { prompt } = buildPersonaPrompt(project, profile);
 
     for (const code of PATHY_CODES) {
       expect(prompt).toMatch(new RegExp(`^- ${code} → `, "m"));
     }
+  });
+
+  it("asks for a different person when the project already has personas (AC12.2)", () => {
+    const { prompt } = buildPersonaPrompt(project, profile, ["Ana", "Bruno"]);
+
+    expect(prompt).toContain('already has the personas "Ana", "Bruno"');
+  });
+
+  it("does not mention other personas for the first one", () => {
+    expect(buildPersonaPrompt(project, profile).prompt).not.toContain("already has the personas");
   });
 });

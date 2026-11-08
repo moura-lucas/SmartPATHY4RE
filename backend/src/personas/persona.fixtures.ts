@@ -1,4 +1,6 @@
+import { vi } from "vitest";
 import type { Persona, PersonaDto, PersonaSections, ProjectDto } from "@smartpathy/shared";
+import type { PersonaRepository } from "./persona.repository.js";
 
 // Test data shared by the persona tests.
 
@@ -71,4 +73,29 @@ export function buildPersonaDto(): PersonaDto {
 export function llmResponse(overrides: Record<string, unknown> = {}): string {
   const { techExperienceLevel: _omit, ...generated } = buildPersona();
   return JSON.stringify({ ...generated, ...overrides });
+}
+
+/** An in-memory repository holding the given personas; new ones get the id "persona-new". */
+export function fakePersonaRepository(initial: PersonaDto[] = []): PersonaRepository {
+  return {
+    create: vi.fn(
+      async (projectId, persona): Promise<PersonaDto> => ({
+        ...persona,
+        id: "persona-new",
+        projectId,
+        createdAt: "2026-11-08T12:00:00.000Z",
+        updatedAt: "2026-11-08T12:00:00.000Z",
+      }),
+    ),
+    listByProjectId: vi.fn(async () => initial),
+    findById: vi.fn(async (_projectId, id) => initial.find((p) => p.id === id) ?? null),
+    updateSections: vi.fn(
+      async (_personaId, sections): Promise<PersonaDto> => ({
+        ...buildPersonaDto(),
+        ...sections,
+        updatedAt: "2026-10-19T12:00:00.000Z",
+      }),
+    ),
+    deleteUnlessLast: vi.fn(async () => "deleted" as const),
+  };
 }

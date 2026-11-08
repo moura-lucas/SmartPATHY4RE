@@ -15,7 +15,9 @@ const generateButton = () => screen.getByRole("button", { name: /Generat/ });
 describe("GenerateRequirementsButton (US11)", () => {
   it("shows the requirements step while generating (AC11.1)", () => {
     vi.mocked(generateRequirements).mockReturnValue(new Promise(() => {}));
-    render(<GenerateRequirementsButton projectId="project-1" hasRequirements={false} />);
+    render(
+      <GenerateRequirementsButton projectId="project-1" personaId="persona-1" hasRequirements={false} />,
+    );
 
     fireEvent.click(generateButton());
 
@@ -29,7 +31,7 @@ describe("GenerateRequirementsButton (US11)", () => {
         new GenerationError(GENERATION_ERROR_MESSAGES.ai_invalid_response, "ai_invalid_response"),
       )
       .mockResolvedValueOnce([]);
-    render(<GenerateRequirementsButton projectId="project-1" hasRequirements />);
+    render(<GenerateRequirementsButton projectId="project-1" personaId="persona-2" hasRequirements />);
 
     fireEvent.click(generateButton());
     const replaceDialog = screen.getByRole("dialog", { name: "Replace current requirements?", hidden: true });
@@ -48,7 +50,7 @@ describe("GenerateRequirementsButton (US11)", () => {
 
     expect(replaceDialog).not.toHaveAttribute("open");
     expect(generateRequirements).toHaveBeenCalledTimes(2);
-    expect(generateRequirements).toHaveBeenLastCalledWith("project-1");
-    expect(push).toHaveBeenCalledWith("/projects/project-1/requirements");
+    expect(generateRequirements).toHaveBeenLastCalledWith("project-1", "persona-2");
+    expect(push).toHaveBeenCalledWith("/projects/project-1/requirements?persona=persona-2");
   });
 });
