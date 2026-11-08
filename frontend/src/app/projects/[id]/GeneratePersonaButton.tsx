@@ -18,7 +18,7 @@ export function GeneratePersonaButton({ projectId }: { projectId: string }) {
       <button
         type="button"
         onClick={() => void generation.start()}
-        disabled={generation.busy} // AC3.7 / AC11.1
+        disabled={generation.locked} // AC3.7 / AC11.1
         aria-busy={generation.busy}
         className="btn-primary"
       >

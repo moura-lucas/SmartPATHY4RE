@@ -49,13 +49,12 @@ export function createProjectRepository(
       const rows = await prisma.project.findMany({
         orderBy: { createdAt: "desc" },
         include: {
-          persona: { select: { id: true } },
-          _count: { select: { requirements: true } },
+          _count: { select: { personas: true, requirements: true } },
         },
       });
-      return rows.map(({ persona, _count, ...project }) => {
+      return rows.map(({ _count, ...project }) => {
         const progress = {
-          hasPersona: persona !== null,
+          hasPersona: _count.personas > 0,
           requirementsCount: _count.requirements,
         };
         return { ...toDto(project), ...progress, stage: projectStage(progress) };

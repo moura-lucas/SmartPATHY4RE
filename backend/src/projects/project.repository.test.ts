@@ -19,9 +19,9 @@ function fakePrisma() {
     create: vi.fn(async () => row),
     findUnique: vi.fn(async (): Promise<typeof row | null> => row),
     findMany: vi.fn(async () => [
-      { ...row, id: "project-2", persona: { id: "persona-2" }, _count: { requirements: 16 } },
-      { ...row, id: "project-3", persona: { id: "persona-3" }, _count: { requirements: 0 } },
-      { ...row, persona: null, _count: { requirements: 0 } },
+      { ...row, id: "project-2", _count: { personas: 2, requirements: 16 } },
+      { ...row, id: "project-3", _count: { personas: 1, requirements: 0 } },
+      { ...row, _count: { personas: 0, requirements: 0 } },
     ]),
   };
   return { project, prisma: { project } as unknown as PrismaClient };
@@ -78,8 +78,7 @@ describe("createProjectRepository", () => {
     expect(project.findMany).toHaveBeenCalledWith({
       orderBy: { createdAt: "desc" },
       include: {
-        persona: { select: { id: true } },
-        _count: { select: { requirements: true } },
+        _count: { select: { personas: true, requirements: true } },
       },
     });
     const progress = summaries.map(({ id, hasPersona, requirementsCount, stage }) => ({
@@ -95,6 +94,5 @@ describe("createProjectRepository", () => {
     ]);
     expect(summaries[0]).toMatchObject({ name: "Clinic App", createdAt: "2026-10-09T12:00:00.000Z" });
     expect(summaries[0]).not.toHaveProperty("_count");
-    expect(summaries[0]).not.toHaveProperty("persona");
   });
 });

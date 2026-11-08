@@ -87,7 +87,7 @@ export function PersonaSection({
     setSaving(true);
     setError(null);
     try {
-      const result = await updatePersona(persona.projectId, validation.data);
+      const result = await updatePersona(persona.projectId, persona.id, validation.data);
       if (result.ok) onSaved(result.persona);
       else showErrors(result.fieldErrors);
     } catch (err) {

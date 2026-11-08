@@ -1,13 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getPersona, getProject } from "@/lib/api";
+import { getPersonas, getProject } from "@/lib/api";
 import { buildPersona, buildProject } from "@/test/fixtures";
 import ProjectPage from "./page";
 
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api")>()),
   getProject: vi.fn(),
-  getPersona: vi.fn(),
+  getPersonas: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   notFound: () => {
@@ -23,22 +23,40 @@ async function renderPage() {
 describe("ProjectPage export", () => {
   beforeEach(() => {
     vi.mocked(getProject).mockResolvedValue(buildProject());
-    vi.mocked(getPersona).mockResolvedValue(buildPersona());
+    vi.mocked(getPersonas).mockResolvedValue([buildPersona()]);
   });
 
   it("offers the exports when the project has a persona (AC9.1 / AC10.1)", async () => {
     await renderPage();
 
-    expect(getPersona).toHaveBeenCalledWith("project-1");
+    expect(getPersonas).toHaveBeenCalledWith("project-1");
     expect(screen.getByRole("link", { name: "Export JSON" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Export PDF" })).toBeInTheDocument();
   });
 
   it("disables the exports when the project has no persona (AC9.5 / AC10.5)", async () => {
-    vi.mocked(getPersona).mockResolvedValue(null);
+    vi.mocked(getPersonas).mockResolvedValue([]);
     await renderPage();
 
     expect(screen.getByRole("button", { name: "Export JSON" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Export PDF" })).toBeDisabled();
+  });
+
+  it("links to the personas instead of generating another one from here", async () => {
+    await renderPage();
+
+    expect(screen.getByRole("link", { name: "View personas" })).toHaveAttribute(
+      "href",
+      "/projects/project-1/persona",
+    );
+    expect(screen.queryByRole("button", { name: "Generate PATHY Persona" })).not.toBeInTheDocument();
+  });
+
+  it("offers the generation while the project has no persona (AC2.7)", async () => {
+    vi.mocked(getPersonas).mockResolvedValue([]);
+    await renderPage();
+
+    expect(screen.getByRole("button", { name: "Generate PATHY Persona" })).toBeEnabled();
+    expect(screen.queryByRole("link", { name: "View personas" })).not.toBeInTheDocument();
   });
 });

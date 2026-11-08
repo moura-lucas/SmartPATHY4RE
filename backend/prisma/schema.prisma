@@ -24,14 +24,14 @@ model Project {
   personaAge          Int?
   techExperienceLevel String        @db.VarChar(16)
   createdAt           DateTime      @default(now())
-  persona             Persona?
+  personas            Persona[]
   requirements        Requirement[]
 }
 
 model Persona {
-  id                       String   @id @default(uuid())
-  projectId                String   @unique
-  project                  Project  @relation(fields: [projectId], references: [id])
+  id                       String        @id @default(uuid())
+  projectId                String
+  project                  Project       @relation(fields: [projectId], references: [id])
   name                     String   @db.VarChar(80)
   age                      Int
   techExperienceLevel      String   @db.VarChar(16)
@@ -41,13 +41,18 @@ model Persona {
   problems                 Json
   existingSolutions        Json
   createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  updatedAt                DateTime      @updatedAt
+  requirements             Requirement[]
+
+  @@index([projectId])
 }
 
 model Requirement {
   id          String   @id @default(uuid())
   projectId   String
   project     Project  @relation(fields: [projectId], references: [id])
+  personaId   String
+  persona     Persona  @relation(fields: [personaId], references: [id], onDelete: Cascade) // AC12.5
   code        String   @db.VarChar(16)
   type        String   @db.VarChar(16) // "functional" | "non_functional"
   description String   @db.Text
@@ -57,5 +62,6 @@ model Requirement {
   position    Int // order in which PATHY4RE generated it
   createdAt   DateTime @default(now())
 
-  @@unique([projectId, code]) // AC5.5
+  @@unique([personaId, code]) // AC5.5
+  @@index([projectId])
 }

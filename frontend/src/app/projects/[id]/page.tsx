@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPersona, getProject } from "@/lib/api";
+import { getPersonas, getProject } from "@/lib/api";
 import { LEVEL_LABELS } from "@/lib/labels";
 import { ExportActions } from "./ExportActions";
 import { GeneratePersonaButton } from "./GeneratePersonaButton";
@@ -9,8 +9,9 @@ export default async function ProjectPage({
   params,
 }: PageProps<"/projects/[id]">) {
   const { id } = await params;
-  const [project, persona] = await Promise.all([getProject(id), getPersona(id)]);
+  const [project, personas] = await Promise.all([getProject(id), getPersonas(id)]);
   if (!project) notFound();
+  const hasPersona = (personas?.length ?? 0) > 0;
 
   const details: [string, string][] = [
     ["Application domain", project.domain],
@@ -44,10 +45,18 @@ export default async function ProjectPage({
         ))}
       </dl>
 
-      {/* AC2.7: starts the persona generation flow (US3) for this project. */}
-      <GeneratePersonaButton projectId={project.id} />
+      {/* AC2.7: starts the persona flow (US3); further personas are added from their screen (AC12.1). */}
+      {hasPersona ? (
+        <div className="mt-10">
+          <Link href={`/projects/${project.id}/persona`} className="btn-primary">
+            View personas
+          </Link>
+        </div>
+      ) : (
+        <GeneratePersonaButton projectId={project.id} />
+      )}
 
-      <ExportActions projectId={project.id} hasPersona={persona !== null} />
+      <ExportActions projectId={project.id} personas={personas ?? []} />
     </main>
   );
 }

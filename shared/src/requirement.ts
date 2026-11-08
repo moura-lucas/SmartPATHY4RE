@@ -104,6 +104,7 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
 export type RequirementDto = Requirement & {
   id: string;
   projectId: string;
+  personaId: string;
   createdAt: string; // ISO 8601
 };
 

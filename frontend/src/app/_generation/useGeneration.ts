@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useGenerationLock } from "./GenerationLock";
 import { useLeaveProtection } from "./useLeaveProtection";
 
 /** AC11.2: after this, the elapsed time and the expected duration are shown. */
@@ -45,11 +46,21 @@ export function useGeneration(run: () => Promise<void>) {
   }
 
   const leave = useLeaveProtection(status === "running");
+  const busy = status === "running" || status === "succeeded";
+  const { locked, change } = useGenerationLock();
+
+  useEffect(() => {
+    if (!busy) return;
+    change(1);
+    return () => change(-1);
+  }, [busy, change]);
 
   return {
     status,
     /** True while a generation is running or its result is opening. */
-    busy: status === "running" || status === "succeeded",
+    busy,
+    /** AC11.1: true while any generation on this screen is in progress. */
+    locked: locked || busy,
     error,
     elapsedSeconds,
     start,

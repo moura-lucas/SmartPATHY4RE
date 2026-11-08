@@ -10,10 +10,13 @@ import type {
 } from "../generated/prisma/client.js";
 
 export interface RequirementRepository {
-  /** Swaps all of the project's requirements in a single transaction (AC5.7 / AC5.8). Sorted by code. */
-  replaceAll(projectId: string, requirements: Requirement[]): Promise<RequirementDto[]>;
+  /** Swaps all of the persona's requirements in a single transaction (AC5.7 / AC5.8 / AC12.4). Sorted by code. */
+  replaceAll(
+    persona: { id: string; projectId: string },
+    requirements: Requirement[],
+  ): Promise<RequirementDto[]>;
   /** Sorted by code: FR before NFR, then numerically (AC6.5). */
-  findByProjectId(projectId: string): Promise<RequirementDto[]>;
+  findByPersonaId(personaId: string): Promise<RequirementDto[]>;
 }
 
 // The numeric order of codes (FR2 before FR10) cannot be expressed in SQL on a string column.
@@ -28,6 +31,7 @@ function toDto(row: RequirementRow): RequirementDto {
     ...requirement,
     id: row.id,
     projectId: row.projectId,
+    personaId: row.personaId,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -35,20 +39,21 @@ function toDto(row: RequirementRow): RequirementDto {
 export function createRequirementRepository(
   prisma: PrismaClient,
 ): RequirementRepository {
-  const byPosition = (projectId: string) =>
+  const byPosition = (personaId: string) =>
     prisma.requirement.findMany({
-      where: { projectId },
+      where: { personaId },
       orderBy: { position: "asc" },
     });
 
   return {
-    async replaceAll(projectId, requirements) {
+    async replaceAll({ id: personaId, projectId }, requirements) {
       // Either all are saved, or none (the old ones stay intact).
       const [, , rows] = await prisma.$transaction([
-        prisma.requirement.deleteMany({ where: { projectId } }),
+        prisma.requirement.deleteMany({ where: { personaId } }),
         prisma.requirement.createMany({
           data: requirements.map((req, position) => ({
             projectId,
+            personaId,
             position,
             code: req.code,
             type: req.type,
@@ -58,12 +63,12 @@ export function createRequirementRepository(
             derivedFrom: req.derivedFrom,
           })),
         }),
-        byPosition(projectId),
+        byPosition(personaId),
       ]);
       return sortedDtos(rows);
     },
-    async findByProjectId(projectId) {
-      return sortedDtos(await byPosition(projectId));
+    async findByPersonaId(personaId) {
+      return sortedDtos(await byPosition(personaId));
     },
   };
 }

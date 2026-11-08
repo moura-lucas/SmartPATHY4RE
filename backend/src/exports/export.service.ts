@@ -11,11 +11,15 @@ import type { RequirementRepository } from "../requirements/requirement.reposito
 export type ExportDataResult =
   | { status: "project_not_found" }
   | { status: "persona_missing" }
+  | { status: "persona_not_found" }
   | { status: "ready"; data: ProjectExport };
 
 export interface ExportService {
-  /** What both formats export: project, persona, requirements sorted by code and the date. */
-  load(projectId: string): Promise<ExportDataResult>;
+  /**
+   * What both formats export: project, one persona, its requirements sorted by code
+   * and the date. Without `personaId`, the project's first persona.
+   */
+  load(projectId: string, personaId?: string): Promise<ExportDataResult>;
 }
 
 export function createExportService(deps: {
@@ -27,12 +31,14 @@ export function createExportService(deps: {
   const now = deps.now ?? (() => new Date());
 
   return {
-    async load(projectId) {
+    async load(projectId, personaId) {
       const project = await deps.projects.findById(projectId);
       if (!project) return { status: "project_not_found" };
-      const persona = await deps.personas.findByProjectId(project.id);
-      if (!persona) return { status: "persona_missing" }; // AC9.5 / AC10.5
-      const requirements = await deps.requirements.findByProjectId(project.id);
+      const personas = await deps.personas.listByProjectId(project.id);
+      if (personas.length === 0) return { status: "persona_missing" }; // AC9.5 / AC10.5
+      const persona = personaId ? personas.find(({ id }) => id === personaId) : personas[0];
+      if (!persona) return { status: "persona_not_found" };
+      const requirements = await deps.requirements.findByPersonaId(persona.id);
 
       // Parsing with the shared schemas drops internal fields (ids, timestamps) and
       // guarantees the file validates against them (AC9.3).

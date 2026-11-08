@@ -2,6 +2,7 @@ import type {
   CreateProjectFieldErrors,
   CreateProjectInput,
   ExportFormat,
+  NewPersonaInput,
   PersonaDto,
   PersonaSections,
   PersonaSectionsFieldErrors,
@@ -28,8 +29,9 @@ export const API_URL =
  * AC9.1 / AC10.1: downloaded by the browser itself, so it always uses the public URL,
  * even when rendered on the server (where API_URL may be a Docker-internal address).
  */
-export function exportUrl(projectId: string, format: ExportFormat): string {
-  return `${PUBLIC_API_URL}/projects/${encodeURIComponent(projectId)}/export?format=${format}`;
+export function exportUrl(projectId: string, format: ExportFormat, personaId?: string): string {
+  const persona = personaId ? `&persona=${encodeURIComponent(personaId)}` : "";
+  return `${PUBLIC_API_URL}/projects/${encodeURIComponent(projectId)}/export?format=${format}${persona}`;
 }
 
 export type CreateProjectResult =
@@ -71,12 +73,10 @@ export async function getProject(id: string): Promise<ProjectDto | null> {
   return response.json();
 }
 
-/** AC4.1: null when the project has no persona yet (AC4.6). */
-export async function getPersona(
-  projectId: string,
-): Promise<PersonaDto | null> {
+/** AC4.1 / AC12.3: oldest first; empty when the project has no persona yet. Null when it does not exist. */
+export async function getPersonas(projectId: string): Promise<PersonaDto[] | null> {
   const response = await fetch(
-    `${API_URL}/projects/${encodeURIComponent(projectId)}/persona`,
+    `${API_URL}/projects/${encodeURIComponent(projectId)}/personas`,
     { cache: "no-store" },
   );
   if (response.status === 404) return null;
@@ -91,10 +91,11 @@ export type UpdatePersonaResult =
 /** AC7.2 / AC7.3: the backend validates with the same shared schema (400 = field errors). */
 export async function updatePersona(
   projectId: string,
+  personaId: string,
   sections: PersonaSections,
 ): Promise<UpdatePersonaResult> {
   const response = await fetch(
-    `${API_URL}/projects/${encodeURIComponent(projectId)}/persona`,
+    `${API_URL}/projects/${encodeURIComponent(projectId)}/personas/${encodeURIComponent(personaId)}`,
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -115,17 +116,42 @@ export async function updatePersona(
 /** AC3.1: the backend builds the prompt from the stored project data. */
 export async function generatePersona(projectId: string): Promise<PersonaDto> {
   return requestGeneration(`/projects/${encodeURIComponent(projectId)}/generate-persona`, {
-    notReady: null,
+    conflict: "This project already has a persona.",
     fallback: "Could not generate the persona. Please try again.",
   });
 }
 
-/** AC5.8: null when the project does not exist; empty when nothing was generated yet. */
+/** AC12.1 / AC12.2: adds a persona; the backend reuses the project's application context. */
+export async function createPersona(
+  projectId: string,
+  input: NewPersonaInput,
+): Promise<PersonaDto> {
+  return requestGeneration(`/projects/${encodeURIComponent(projectId)}/personas`, {
+    body: input,
+    conflict: "Generate the PATHY persona before adding another one.",
+    fallback: "Could not generate the persona. Please try again.",
+  });
+}
+
+/** AC12.5: the backend also removes the persona's requirements. */
+export async function deletePersona(projectId: string, personaId: string): Promise<void> {
+  const response = await fetch(
+    `${API_URL}/projects/${encodeURIComponent(projectId)}/personas/${encodeURIComponent(personaId)}`,
+    { method: "DELETE" },
+  );
+  if (response.status === 204) return;
+  if (response.status === 409) throw new Error("A project must keep at least one persona.");
+  if (response.status === 404) throw new Error("This persona no longer exists. Reload the page.");
+  throw new Error("Could not delete the persona. Please try again.");
+}
+
+/** AC5.8 / AC12.4: null when the persona does not exist; empty when nothing was generated yet. */
 export async function getRequirements(
   projectId: string,
+  personaId: string,
 ): Promise<RequirementDto[] | null> {
   const response = await fetch(
-    `${API_URL}/projects/${encodeURIComponent(projectId)}/requirements`,
+    `${API_URL}/projects/${encodeURIComponent(projectId)}/personas/${encodeURIComponent(personaId)}/requirements`,
     { cache: "no-store" },
   );
   if (response.status === 404) return null;
@@ -133,14 +159,15 @@ export async function getRequirements(
   return response.json();
 }
 
-/** AC5.2: the backend builds the prompt from the stored project and persona. */
+/** AC5.2 / AC12.4: the backend builds the prompt from the project and the selected persona. */
 export async function generateRequirements(
   projectId: string,
+  personaId: string,
 ): Promise<RequirementDto[]> {
   return requestGeneration(
-    `/projects/${encodeURIComponent(projectId)}/generate-requirements`,
+    `/projects/${encodeURIComponent(projectId)}/personas/${encodeURIComponent(personaId)}/generate-requirements`,
     {
-      notReady: "Generate the PATHY persona before generating requirements.",
+      conflict: "Generate the PATHY persona before generating requirements.",
       fallback: "Could not generate the requirements. Please try again.",
     },
   );
@@ -152,19 +179,25 @@ export async function generateRequirements(
  */
 async function requestGeneration<T>(
   path: string,
-  messages: { notReady: string | null; fallback: string },
+  options: { body?: unknown; conflict: string; fallback: string },
 ): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, { method: "POST" });
+    response = await fetch(`${API_URL}${path}`, {
+      method: "POST",
+      ...(options.body === undefined
+        ? {}
+        : {
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(options.body),
+          }),
+    });
   } catch {
     throw new GenerationError(SERVER_UNREACHABLE_MESSAGE);
   }
   if (response.status === 201) return response.json();
   if (response.status === 404) throw new GenerationError("Project not found.");
-  if (response.status === 409 && messages.notReady) {
-    throw new GenerationError(messages.notReady);
-  }
+  if (response.status === 409) throw new GenerationError(options.conflict);
   // 502: the AI failed. 429: our own per-IP limit on generations.
   if (response.status === 502 || response.status === 429) {
     const body: unknown = await response.json().catch(() => null);
@@ -174,5 +207,5 @@ async function requestGeneration<T>(
         : "ai_unavailable";
     throw new GenerationError(GENERATION_ERROR_MESSAGES[code], code);
   }
-  throw new GenerationError(messages.fallback);
+  throw new GenerationError(options.fallback);
 }

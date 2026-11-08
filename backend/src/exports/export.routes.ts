@@ -20,7 +20,8 @@ export function exportRoutes(service: ExportService) {
       return;
     }
 
-    const result = await service.load(req.params.id);
+    const personaId = typeof req.query.persona === "string" ? req.query.persona : undefined;
+    const result = await service.load(req.params.id, personaId);
     switch (result.status) {
       case "project_not_found":
         res.status(404).json({ error: "Project not found." });
@@ -29,6 +30,9 @@ export function exportRoutes(service: ExportService) {
         res.status(409).json({
           error: "The project does not have a persona yet. Generate the PATHY persona first.",
         });
+        return;
+      case "persona_not_found":
+        res.status(404).json({ error: "Persona not found." });
         return;
       case "ready": {
         const { data } = result;

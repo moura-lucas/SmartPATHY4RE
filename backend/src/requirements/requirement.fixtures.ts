@@ -32,11 +32,15 @@ export function buildRequirements(): Requirement[] {
   ];
 }
 
-export function buildRequirementDtos(projectId = "project-1"): RequirementDto[] {
+export function buildRequirementDtos(
+  projectId = "project-1",
+  personaId = "persona-1",
+): RequirementDto[] {
   return buildRequirements().map((req, i) => ({
     ...req,
     id: `requirement-${i + 1}`,
     projectId,
+    personaId,
     createdAt: "2026-10-14T12:00:00.000Z",
   }));
 }

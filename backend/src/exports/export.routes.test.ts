@@ -4,7 +4,7 @@ import { personaSchema, projectExportSchema, requirementSchema } from "@smartpat
 import { createApp } from "../app.js";
 import { LlmService } from "../llm/llmService.js";
 import type { PersonaRepository } from "../personas/persona.repository.js";
-import { buildPersonaDto, project } from "../personas/persona.fixtures.js";
+import { buildPersonaDto, project, fakePersonaRepository } from "../personas/persona.fixtures.js";
 import type { ProjectRepository } from "../projects/project.repository.js";
 import { buildRequirementDtos } from "../requirements/requirement.fixtures.js";
 import type { RequirementRepository } from "../requirements/requirement.repository.js";
@@ -28,14 +28,10 @@ beforeEach(() => {
     findById: vi.fn(async (id) => (id === project.id ? accented : null)),
     listSummaries: vi.fn(),
   };
-  personaRepository = {
-    upsert: vi.fn(),
-    findByProjectId: vi.fn(async () => buildPersonaDto()),
-    updateSections: vi.fn(),
-  };
+  personaRepository = fakePersonaRepository([buildPersonaDto()]);
   requirementRepository = {
     replaceAll: vi.fn(),
-    findByProjectId: vi.fn(async () => buildRequirementDtos()),
+    findByPersonaId: vi.fn(async () => buildRequirementDtos()),
   };
   return () => vi.useRealTimers();
 });
@@ -106,7 +102,7 @@ describe("GET /projects/:id/export errors", () => {
   it.each(["json", "pdf"])(
     "responds 409 when the project has no persona (%s) (AC9.5 / AC10.5)",
     async (format) => {
-      personaRepository.findByProjectId = vi.fn(async () => null);
+      personaRepository = fakePersonaRepository();
 
       const res = await request(app()).get(`/projects/project-1/export?format=${format}`);
 
@@ -114,6 +110,12 @@ describe("GET /projects/:id/export errors", () => {
       expect(res.body.error).toMatch(/persona/);
     },
   );
+
+  it("responds 404 when the selected persona is not in the project", async () => {
+    const res = await request(app()).get("/projects/project-1/export?format=json&persona=other");
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Persona not found." });
+  });
 
   it("responds 404 when the project does not exist", async () => {
     const res = await request(app()).get("/projects/missing/export?format=json");
