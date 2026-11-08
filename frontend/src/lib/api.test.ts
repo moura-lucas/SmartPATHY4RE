@@ -89,6 +89,15 @@ describe("generation requests (US11)", () => {
     },
   );
 
+  it("explains the per-IP generation limit like the AI usage limit", async () => {
+    mockFetch(429, { error: "Technical text", code: "ai_rate_limited" });
+
+    await expect(generatePersona("project-1")).rejects.toMatchObject({
+      code: "ai_rate_limited",
+      message: GENERATION_ERROR_MESSAGES.ai_rate_limited,
+    });
+  });
+
   it("treats a 502 without a known code as the AI being unavailable", async () => {
     mockFetch(502, { error: "Bad gateway" });
 

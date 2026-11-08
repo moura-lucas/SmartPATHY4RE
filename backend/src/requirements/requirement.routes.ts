@@ -1,11 +1,11 @@
-import { Router } from "express";
+import { Router, type RequestHandler } from "express";
 import type { RequirementService } from "./requirement.service.js";
 
-export function requirementRoutes(service: RequirementService) {
+export function requirementRoutes(service: RequirementService, generationLimit: RequestHandler<{ id: string }>) {
   const router = Router();
 
   // AC5.1 / AC5.7. LLM failures become 502 in the errorHandler (AC5.10).
-  router.post("/:id/generate-requirements", async (req, res) => {
+  router.post("/:id/generate-requirements", generationLimit, async (req, res) => {
     const result = await service.generate(req.params.id);
     switch (result.status) {
       case "project_not_found":

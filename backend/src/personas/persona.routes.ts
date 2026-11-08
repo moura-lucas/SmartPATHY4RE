@@ -1,12 +1,12 @@
-import { Router } from "express";
+import { Router, type RequestHandler } from "express";
 import { validatePersonaSections } from "@smartpathy/shared";
 import type { PersonaService } from "./persona.service.js";
 
-export function personaRoutes(service: PersonaService) {
+export function personaRoutes(service: PersonaService, generationLimit: RequestHandler<{ id: string }>) {
   const router = Router();
 
   // AC3.1 / AC3.6. LLM failures become 502 in the errorHandler (AC3.8).
-  router.post("/:id/generate-persona", async (req, res) => {
+  router.post("/:id/generate-persona", generationLimit, async (req, res) => {
     const persona = await service.generate(req.params.id);
     if (!persona) {
       res.status(404).json({ error: "Project not found." });
