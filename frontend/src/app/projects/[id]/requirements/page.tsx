@@ -5,6 +5,7 @@ import { personaQuery, selectPersona } from "@/lib/personas";
 import { GenerateRequirementsButton } from "../persona/GenerateRequirementsButton";
 import { PersonaSwitcher } from "../persona/PersonaSwitcher";
 import { Breadcrumb } from "./Breadcrumb";
+import { GenerateMoreRequirementsButton } from "./GenerateMoreRequirementsButton";
 import { RequirementsSummary } from "./RequirementsSummary";
 import { RequirementsTable } from "./RequirementsTable";
 
@@ -119,7 +120,15 @@ export default async function RequirementsPage({
       />
 
       <div className="mt-10 border-t border-zinc-200 pt-6 dark:border-zinc-800">
-        {backToPersona}
+        {/* The key ends the "generated" state: the new requirements appear on this same page. */}
+        <GenerateMoreRequirementsButton
+          key={`${persona.id}-${requirements.length}`}
+          projectId={project.id}
+          personaId={persona.id}
+          requirementsCount={requirements.length}
+        >
+          {backToPersona}
+        </GenerateMoreRequirementsButton>
       </div>
     </main>
   );

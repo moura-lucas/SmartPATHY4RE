@@ -30,6 +30,10 @@ beforeEach(() => {
   personaRepository = fakePersonaRepository([buildPersonaDto()]);
   requirementRepository = {
     replaceAll: vi.fn(async ({ id, projectId }) => buildRequirementDtos(projectId, id)),
+    append: vi.fn(async ({ id, projectId }) => ({
+      status: "appended" as const,
+      requirements: buildRequirementDtos(projectId, id),
+    })),
     findByPersonaId: vi.fn(async () => buildRequirementDtos()),
   };
 });
@@ -83,6 +87,65 @@ describe("POST /projects/:id/personas/:personaId/generate-requirements", () => {
     expect(res.status).toBe(502);
     expect(res.text).not.toMatch(/401|Gemini/);
     expect(requirementRepository.replaceAll).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /projects/:id/personas/:personaId/generate-more-requirements", () => {
+  const url = "/projects/project-1/personas/persona-1/generate-more-requirements";
+
+  it("adds the requirements and returns the full list (AC13.1)", async () => {
+    const res = await request(app()).post(url);
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual(buildRequirementDtos());
+    expect(requirementRepository.replaceAll).not.toHaveBeenCalled();
+  });
+
+  it("responds 409 when the persona has no requirements yet", async () => {
+    requirementRepository.findByPersonaId = vi.fn(async () => []);
+
+    const res = await request(app()).post(url);
+
+    expect(res.status).toBe(409);
+    expect(complete).not.toHaveBeenCalled();
+  });
+
+  it("responds 409 when the limit was reached", async () => {
+    requirementRepository.append = vi.fn(async () => ({ status: "limit_reached" as const }));
+
+    const res = await request(app()).post(url);
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/limit/);
+  });
+
+  it("responds 404 for a persona outside the project", async () => {
+    const res = await request(app()).post(
+      "/projects/project-1/personas/other/generate-more-requirements",
+    );
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Persona not found." });
+  });
+
+  it("responds 404 when the project does not exist", async () => {
+    const res = await request(app()).post(
+      "/projects/missing/personas/persona-1/generate-more-requirements",
+    );
+
+    expect(res.status).toBe(404);
+  });
+
+  it("responds 502 and saves nothing when the LLM fails (AC13.4)", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    complete = async () => {
+      throw new LlmError("Gemini responded with HTTP 503", true);
+    };
+
+    const res = await request(app()).post(url);
+
+    expect(res.status).toBe(502);
+    expect(requirementRepository.append).not.toHaveBeenCalled();
   });
 });
 

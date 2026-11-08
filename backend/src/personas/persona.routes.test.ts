@@ -25,6 +25,7 @@ function app() {
   const llm = new LlmService({ complete }, { maxRetries: 0, baseDelayMs: 0 });
   const requirementRepository: RequirementRepository = {
     replaceAll: vi.fn(),
+    append: vi.fn(),
     findByPersonaId: vi.fn(),
   };
   return createApp({ llm, projectRepository, personaRepository, requirementRepository });

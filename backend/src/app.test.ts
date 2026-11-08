@@ -29,6 +29,9 @@ const requirementRepository: RequirementRepository = {
   replaceAll: async () => {
     throw new Error("not used");
   },
+  append: async () => {
+    throw new Error("not used");
+  },
   findByPersonaId: async () => [],
 };
 const deps = { llm, projectRepository, personaRepository, requirementRepository };

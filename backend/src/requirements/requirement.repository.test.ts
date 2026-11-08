@@ -8,6 +8,7 @@ const rows = buildRequirements().map((req, position) => ({
   id: `requirement-${position + 1}`,
   projectId: "project-1",
   personaId: "persona-1",
+  isNew: false,
   position,
   createdAt: new Date("2026-10-14T12:00:00.000Z"),
 }));
@@ -15,16 +16,17 @@ const rows = buildRequirements().map((req, position) => ({
 function fakePrisma() {
   const requirement = {
     deleteMany: vi.fn(() => "deleteMany"),
-    createMany: vi.fn(() => "createMany"),
-    findMany: vi.fn(async () => rows),
+    createMany: vi.fn((_args: unknown) => "createMany" as unknown),
+    updateMany: vi.fn((_args: unknown) => "updateMany" as unknown),
+    findMany: vi.fn(async (): Promise<unknown[]> => rows),
   };
-  const $transaction = vi.fn(async (ops: unknown[]) => [
-    { count: 0 },
-    { count: rows.length },
-    await ops[2],
-  ]);
+  const tx = { requirement, $queryRaw: vi.fn(async () => []) };
+  const $transaction = vi.fn(async (arg: unknown[] | ((client: typeof tx) => Promise<unknown>)) =>
+    typeof arg === "function" ? arg(tx) : [{ count: 0 }, { count: rows.length }, await arg[2]],
+  );
   return {
     requirement,
+    tx,
     $transaction,
     prisma: { requirement, $transaction } as unknown as PrismaClient,
   };
@@ -55,7 +57,51 @@ describe("createRequirementRepository", () => {
       id: "requirement-1",
       projectId: "project-1",
       personaId: "persona-1",
+      isNew: false,
       createdAt: "2026-10-14T12:00:00.000Z",
+    });
+  });
+
+  describe("append (AC13.1 / AC13.3 / AC13.5)", () => {
+    const persona = { id: "persona-1", projectId: "project-1" };
+    const stored = (count: number) =>
+      Array.from({ length: count }, (_, i) => ({ code: `FR${i + 1}`, position: i }));
+
+    it("continues the numbering and marks only the new ones, in one transaction", async () => {
+      const { requirement, tx, $transaction, prisma } = fakePrisma();
+      requirement.findMany.mockResolvedValueOnce([
+        { code: "FR8", position: 7 },
+        { code: "NFR2", position: 8 },
+      ]);
+
+      const result = await createRequirementRepository(prisma).append(persona, buildRequirements());
+
+      expect($transaction).toHaveBeenCalledTimes(1);
+      expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+      expect(requirement.updateMany).toHaveBeenCalledWith({
+        where: { personaId: "persona-1", isNew: true },
+        data: { isNew: false },
+      });
+      const { data } = requirement.createMany.mock.calls[0]![0] as {
+        data: { code: string; position: number; isNew: boolean }[];
+      };
+      expect(data.map((r) => r.code)).toEqual(["FR9", "FR10", "NFR3"]);
+      expect(data.map((r) => r.position)).toEqual([9, 10, 11]);
+      expect(data.every((r) => r.isNew)).toBe(true);
+      expect(requirement.deleteMany).not.toHaveBeenCalled();
+      expect(result.status).toBe("appended");
+    });
+
+    it("refuses a batch that would pass the limit, changing nothing", async () => {
+      const { requirement, prisma } = fakePrisma();
+      requirement.findMany.mockResolvedValueOnce(stored(38));
+
+      await expect(
+        createRequirementRepository(prisma).append(persona, buildRequirements()),
+      ).resolves.toEqual({ status: "limit_reached" });
+
+      expect(requirement.updateMany).not.toHaveBeenCalled();
+      expect(requirement.createMany).not.toHaveBeenCalled();
     });
   });
 

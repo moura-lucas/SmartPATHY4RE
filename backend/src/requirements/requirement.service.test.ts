@@ -21,6 +21,7 @@ let projects: ProjectRepository;
 let personas: PersonaRepository;
 let requirements: {
   replaceAll: ReturnType<typeof vi.fn<RequirementRepository["replaceAll"]>>;
+  append: ReturnType<typeof vi.fn<RequirementRepository["append"]>>;
   findByPersonaId: ReturnType<typeof vi.fn<RequirementRepository["findByPersonaId"]>>;
 };
 
@@ -42,6 +43,10 @@ beforeEach(() => {
     replaceAll: vi.fn<RequirementRepository["replaceAll"]>(async ({ id, projectId }) =>
       buildRequirementDtos(projectId, id),
     ),
+    append: vi.fn<RequirementRepository["append"]>(async ({ id, projectId }) => ({
+      status: "appended",
+      requirements: buildRequirementDtos(projectId, id),
+    })),
     findByPersonaId: vi.fn<RequirementRepository["findByPersonaId"]>(async () =>
       buildRequirementDtos(),
     ),
@@ -138,6 +143,108 @@ describe("RequirementService.generate", () => {
 
     await expect(service().generate(project.id, PERSONA)).rejects.toBeInstanceOf(LlmUnavailableError);
     expect(requirements.replaceAll).not.toHaveBeenCalled();
+  });
+});
+
+describe("RequirementService.generateMore", () => {
+  /** A list of the given size, as stored for the persona. */
+  const stored = (count: number) =>
+    Array.from({ length: count }, (_, i) => ({
+      ...buildRequirementDtos()[0]!,
+      id: `r-${i}`,
+      code: `FR${i + 1}`,
+    }));
+
+  it("adds the validated requirements to the persona's (AC13.1)", async () => {
+    const result = await service().generateMore(project.id, PERSONA);
+
+    expect(requirements.append).toHaveBeenCalledWith(
+      expect.objectContaining({ id: PERSONA, projectId: project.id }),
+      buildRequirements(),
+    );
+    expect(requirements.replaceAll).not.toHaveBeenCalled();
+    expect(result).toEqual({ status: "generated", requirements: buildRequirementDtos() });
+  });
+
+  it("includes the existing requirements in the prompt (AC13.2)", async () => {
+    await service().generateMore(project.id, PERSONA);
+
+    const [request] = provider.complete.mock.calls[0]!;
+    expect(request.prompt).toContain(buildRequirements()[0]!.description);
+  });
+
+  it.each<[string, Requirement[]]>([
+    ["without non-functional requirements", buildRequirements().slice(0, 2)],
+    [
+      "with duplicate codes",
+      buildRequirements().map((r) => (r.code === "FR2" ? { ...r, code: "FR1" } : r)),
+    ],
+    [
+      "larger than a batch",
+      Array.from({ length: 9 }, (_, i) => ({ ...buildRequirements()[0]!, code: `FR${i + 1}` })).concat(
+        buildRequirements()[2]!,
+      ),
+    ],
+  ])("saves nothing for a response %s (AC13.4)", async (_name, invalid) => {
+    provider.complete.mockResolvedValue(llmRequirementsResponse(invalid));
+
+    await expect(service().generateMore(project.id, PERSONA)).rejects.toBeInstanceOf(
+      LlmUnavailableError,
+    );
+    expect(requirements.append).not.toHaveBeenCalled();
+  });
+
+  it("saves nothing when the LLM fails (AC13.4)", async () => {
+    provider.complete.mockRejectedValue(new LlmError("HTTP 503", false));
+
+    await expect(service().generateMore(project.id, PERSONA)).rejects.toBeInstanceOf(
+      LlmUnavailableError,
+    );
+    expect(requirements.append).not.toHaveBeenCalled();
+  });
+
+  it("does not call the LLM when the persona has no requirements yet", async () => {
+    requirements.findByPersonaId.mockResolvedValue([]);
+
+    await expect(service().generateMore(project.id, PERSONA)).resolves.toEqual({
+      status: "no_requirements",
+    });
+    expect(provider.complete).not.toHaveBeenCalled();
+  });
+
+  it("does not call the LLM when there is no room for another batch", async () => {
+    requirements.findByPersonaId.mockResolvedValue(stored(33));
+
+    await expect(service().generateMore(project.id, PERSONA)).resolves.toEqual({
+      status: "limit_reached",
+    });
+    expect(provider.complete).not.toHaveBeenCalled();
+  });
+
+  it("allows the last batch, up to 40 requirements", async () => {
+    requirements.findByPersonaId.mockResolvedValue(stored(32));
+
+    await expect(service().generateMore(project.id, PERSONA)).resolves.toMatchObject({
+      status: "generated",
+    });
+  });
+
+  it("reports the limit when a simultaneous generation took the room", async () => {
+    requirements.append.mockResolvedValue({ status: "limit_reached" });
+
+    await expect(service().generateMore(project.id, PERSONA)).resolves.toEqual({
+      status: "limit_reached",
+    });
+  });
+
+  it("reports a missing project or persona", async () => {
+    await expect(service().generateMore("missing", PERSONA)).resolves.toEqual({
+      status: "project_not_found",
+    });
+    await expect(service().generateMore(project.id, "other")).resolves.toEqual({
+      status: "persona_not_found",
+    });
+    expect(provider.complete).not.toHaveBeenCalled();
   });
 });
 

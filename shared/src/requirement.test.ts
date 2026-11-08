@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  ADDITIONAL_REQUIREMENTS_BATCH,
+  additionalRequirementsSchema,
+  canGenerateMoreRequirements,
+  continueRequirementCodes,
   compareRequirementCodes,
   isRequirementsOutdated,
   generatedRequirementsSchema,
@@ -116,5 +120,70 @@ describe("isRequirementsOutdated (US7)", () => {
 
   it("is false when there are no requirements", () => {
     expect(isRequirementsOutdated({ updatedAt: "2026-10-15T09:00:00.000Z" }, [])).toBe(false);
+  });
+});
+
+describe("additional requirements (US13)", () => {
+  const nfr = { ...validRequirement, code: "NFR1", type: "non_functional" };
+
+  describe("additionalRequirementsSchema", () => {
+    it("accepts a batch with both types", () => {
+      const result = additionalRequirementsSchema.safeParse({ requirements: [validRequirement, nfr] });
+      expect(result.success).toBe(true);
+    });
+
+    it("applies the US5 validation (AC13.4)", () => {
+      const result = additionalRequirementsSchema.safeParse({ requirements: [validRequirement] });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects more requirements than a batch", () => {
+      const many = Array.from({ length: ADDITIONAL_REQUIREMENTS_BATCH }, (_, i) => ({
+        ...validRequirement,
+        code: `FR${i + 1}`,
+      }));
+      const result = additionalRequirementsSchema.safeParse({ requirements: [...many, nfr] });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("canGenerateMoreRequirements", () => {
+    it.each([
+      [0, false],
+      [16, true],
+      [32, true],
+      [33, false],
+      [40, false],
+    ])("with %i existing requirements → %s", (count, expected) => {
+      expect(canGenerateMoreRequirements(count)).toBe(expected);
+    });
+  });
+
+  describe("continueRequirementCodes (AC13.3)", () => {
+    const requirement = (code: string, type: "functional" | "non_functional") =>
+      requirementSchema.parse({ ...validRequirement, code, type });
+
+    it("continues each type after its highest code", () => {
+      const result = continueRequirementCodes(
+        ["FR1", "FR8", "NFR1", "NFR2"],
+        [requirement("FR1", "functional"), requirement("NFR1", "non_functional"), requirement("FR2", "functional")],
+      );
+      expect(result.map((r) => r.code)).toEqual(["FR9", "NFR3", "FR10"]);
+    });
+
+    it("orders numerically, not alphabetically", () => {
+      const [first] = continueRequirementCodes(["FR9", "FR10"], [requirement("FR1", "functional")]);
+      expect(first?.code).toBe("FR11");
+    });
+
+    it("does not confuse FR with NFR", () => {
+      const [first] = continueRequirementCodes(["NFR7"], [requirement("FR1", "functional")]);
+      expect(first?.code).toBe("FR1");
+    });
+
+    it("keeps the rest of the requirement", () => {
+      const [first] = continueRequirementCodes(["FR1"], [requirement("FR1", "functional")]);
+      expect(first).toMatchObject({ description: validRequirement.description, moscow: "must" });
+    });
   });
 });

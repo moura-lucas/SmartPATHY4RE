@@ -43,6 +43,12 @@ export function RequirementsTable({
                 <tr key={req.id} className="align-top">
                   <th scope="row" className="px-3 py-3 font-mono font-semibold whitespace-nowrap">
                     {req.code}
+                    {/* AC13.5 */}
+                    {req.isNew && (
+                      <span className="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 font-sans text-xs font-medium text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200">
+                        New
+                      </span>
+                    )}
                   </th>
                   <td className="px-3 py-3 whitespace-pre-wrap break-words">{req.description}</td>
                   <td className="px-3 py-3 whitespace-nowrap">{MOSCOW_LABELS[req.moscow]}</td>

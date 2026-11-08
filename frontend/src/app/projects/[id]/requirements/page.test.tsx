@@ -9,6 +9,7 @@ vi.mock("@/lib/api", () => ({
   getPersonas: vi.fn(),
   getRequirements: vi.fn(),
   generateRequirements: vi.fn(),
+  generateMoreRequirements: vi.fn(),
 }));
 
 const notFoundError = new Error("NEXT_NOT_FOUND");
@@ -116,5 +117,16 @@ describe("RequirementsPage", () => {
       "href",
       "/projects/project-1/requirements?persona=persona-1",
     );
+  });
+
+  it("offers more requirements only when the persona already has some (AC13.1)", async () => {
+    await renderPage();
+    expect(screen.getByRole("button", { name: "Generate more requirements" })).toBeEnabled();
+  });
+
+  it("does not offer more requirements while there are none (AC6.8)", async () => {
+    vi.mocked(getRequirements).mockResolvedValue([]);
+    await renderPage();
+    expect(screen.queryByRole("button", { name: "Generate more requirements" })).not.toBeInTheDocument();
   });
 });

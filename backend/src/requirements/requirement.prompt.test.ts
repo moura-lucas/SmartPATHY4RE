@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { PATHY_FIELDS } from "@smartpathy/shared";
 import { buildPersona, project } from "../personas/persona.fixtures.js";
+import { buildRequirements } from "./requirement.fixtures.js";
 import {
+  buildAdditionalRequirementsPrompt,
   buildRequirementsPrompt,
   FUNCTIONAL_TARGET,
   NON_FUNCTIONAL_TARGET,
@@ -51,5 +53,32 @@ describe("buildRequirementsPrompt", () => {
 
     expect(prompt).toContain(`exactly ${FUNCTIONAL_TARGET} functional requirements`);
     expect(prompt).toContain(`${NON_FUNCTIONAL_TARGET} non-functional requirements`);
+  });
+});
+
+describe("buildAdditionalRequirementsPrompt (AC13.2)", () => {
+  const build = () =>
+    buildAdditionalRequirementsPrompt(project, buildPersona(), buildRequirements()).prompt;
+
+  it("keeps the application context and the persona", () => {
+    expect(build()).toContain("Domain: Healthcare");
+    expect(build()).toContain("- W1 (Profession): Nurse");
+  });
+
+  it("lists the requirements the persona already has", () => {
+    for (const { code, description } of buildRequirements()) {
+      expect(build()).toContain(`- ${code} `);
+      expect(build()).toContain(description);
+    }
+  });
+
+  it("forbids repetition and asks for aspects not yet addressed", () => {
+    expect(build()).toContain("Do NOT repeat or rephrase");
+    expect(build()).toContain("not yet addressed");
+  });
+
+  it("asks for the size of a batch", () => {
+    expect(build()).toContain("exactly 5 functional requirements");
+    expect(build()).toContain("3 non-functional requirements");
   });
 });

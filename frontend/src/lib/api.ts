@@ -173,6 +173,20 @@ export async function generateRequirements(
   );
 }
 
+/** AC13.1: adds to the requirements the persona already has. */
+export async function generateMoreRequirements(
+  projectId: string,
+  personaId: string,
+): Promise<RequirementDto[]> {
+  return requestGeneration(
+    `/projects/${encodeURIComponent(projectId)}/personas/${encodeURIComponent(personaId)}/generate-more-requirements`,
+    {
+      conflict: "This persona has reached the requirements limit.",
+      fallback: "Could not generate more requirements. Please try again.",
+    },
+  );
+}
+
 /**
  * POSTs a generation request. Failures become a GenerationError whose message
  * states the cause in plain language (AC11.3).
