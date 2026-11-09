@@ -18,7 +18,7 @@ export function ExportActions({
       </h2>
       <p id="export-description" className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
         {hasPersona
-          ? "Choose what to include and download it as a JSON file or a PDF report."
+          ? "Choose what to include and download it as PDF, DOCX, XLSX or JSON."
           : // AC9.5 / AC10.5: the reason the option is disabled.
             "Generate the persona first to export it."}
       </p>

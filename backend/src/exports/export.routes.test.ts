@@ -116,6 +116,30 @@ describe("GET /projects/:id/export content selection (AC15.5)", () => {
   });
 });
 
+describe.each([
+  ["docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+  ["xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+])("GET /projects/:id/export?format=%s (US16)", (format, contentType) => {
+  it("downloads <project-name>-<date>.<extension> (AC16.5)", async () => {
+    const res = await request(app())
+      .get(`/projects/project-1/export?format=${format}`)
+      .buffer(true)
+      .parse((response, done) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk: Buffer) => chunks.push(chunk));
+        response.on("end", () => done(null, Buffer.concat(chunks)));
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toBe(contentType);
+    expect(res.headers["content-disposition"]).toBe(
+      `attachment; filename="gestao-clinica-2026-10-26.${format}"`,
+    );
+    // Both formats are ZIP packages.
+    expect((res.body as Buffer).subarray(0, 2).toString()).toBe("PK");
+  });
+});
+
 describe("GET /projects/:id/export errors", () => {
   it.each(["json", "pdf"])(
     "responds 409 when the project has no persona (%s) (AC9.5 / AC10.5)",
