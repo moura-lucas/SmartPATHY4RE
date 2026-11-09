@@ -8,6 +8,7 @@ import {
 } from "@smartpathy/shared";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
+import { Field } from "@/app/_dialog/modal";
 import { GenerationProgress } from "@/app/_generation/GenerationProgress";
 import { useGeneration } from "@/app/_generation/useGeneration";
 import { createPersona } from "@/lib/api";
@@ -123,39 +124,6 @@ export function NewPersonaButton({
           </div>
         </form>
       </dialog>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  name,
-  required = false,
-  errors,
-  children,
-}: {
-  label: string;
-  name: string;
-  required?: boolean;
-  errors?: string[] | undefined;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={name} className="text-sm font-medium">
-        {label}
-        {required ? (
-          <span aria-hidden="true" className="text-red-600 dark:text-red-400"> *</span>
-        ) : (
-          <span className="font-normal text-zinc-500"> (optional)</span>
-        )}
-      </label>
-      {children}
-      {errors?.map((message) => (
-        <p key={message} className="text-sm text-red-600 dark:text-red-400">
-          {message}
-        </p>
-      ))}
     </div>
   );
 }

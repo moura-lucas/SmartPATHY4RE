@@ -27,6 +27,8 @@ beforeEach(() => {
     create: vi.fn(),
     findById: vi.fn(async (id) => (id === project.id ? accented : null)),
     listSummaries: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
   };
   personaRepository = fakePersonaRepository([buildPersonaDto()]);
   requirementRepository = {

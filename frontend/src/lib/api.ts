@@ -9,6 +9,8 @@ import type {
   PersonaSectionsFieldErrors,
   ProjectDto,
   ProjectSummaryDto,
+  UpdateProjectFieldErrors,
+  UpdateProjectInput,
   RequirementDto,
   RequirementEdit,
   RequirementEditFieldErrors,
@@ -82,6 +84,43 @@ export async function getProject(id: string): Promise<ProjectDto | null> {
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`Unexpected status ${response.status}`);
   return response.json();
+}
+
+export type UpdateProjectResult =
+  | { ok: true; project: ProjectDto }
+  | { ok: false; fieldErrors: UpdateProjectFieldErrors };
+
+/** AC17.1: the backend validates with the same shared schema (400 = field errors). */
+export async function updateProject(
+  id: string,
+  input: UpdateProjectInput,
+): Promise<UpdateProjectResult> {
+  const response = await fetch(`${API_URL}/projects/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (response.ok) return { ok: true, project: await response.json() };
+  if (response.status === 400) {
+    const body = await response.json();
+    return { ok: false, fieldErrors: body.fieldErrors ?? {} };
+  }
+  if (response.status === 404) {
+    throw new Error("This project no longer exists. Reload the page.");
+  }
+  throw new Error("Could not save the changes. Please try again.");
+}
+
+/** AC17.4: the backend also removes the project's personas and requirements. */
+export async function deleteProject(id: string): Promise<void> {
+  const response = await fetch(`${API_URL}/projects/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  if (response.status === 204) return;
+  if (response.status === 404) {
+    throw new Error("This project no longer exists. Reload the page.");
+  }
+  throw new Error("Could not delete the project. Please try again.");
 }
 
 /** AC4.1 / AC12.3: oldest first; empty when the project has no persona yet. Null when it does not exist. */

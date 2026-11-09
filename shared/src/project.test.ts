@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { projectStage, validateCreateProject,
   validateNewPersona,
+  validateUpdateProject,
 } from "./project.js";
 
 const valid = {
@@ -142,5 +143,52 @@ describe("validateNewPersona (AC12.1)", () => {
 
   it("rejects an age out of range", () => {
     expect(validateNewPersona({ techExperienceLevel: "low", personaAge: 200 }).success).toBe(false);
+  });
+});
+
+describe("validateUpdateProject (AC17.1)", () => {
+  const input = {
+    name: "  Clinic App  ",
+    domain: "Healthcare",
+    description: "An app for nurses.",
+    additionalContext: "Night shifts.",
+  };
+
+  it("accepts the editable fields, trimming them", () => {
+    expect(validateUpdateProject(input)).toEqual({
+      success: true,
+      data: { ...input, name: "Clinic App" },
+    });
+  });
+
+  it("ignores the persona data", () => {
+    const result = validateUpdateProject({
+      ...input,
+      personaName: "Ana",
+      personaAge: 34,
+      techExperienceLevel: "high",
+    });
+    expect(result.success && Object.keys(result.data).sort()).toEqual([
+      "additionalContext",
+      "description",
+      "domain",
+      "name",
+    ]);
+  });
+
+  it("treats a blank additional context as absent", () => {
+    const result = validateUpdateProject({ ...input, additionalContext: "   " });
+    expect(result.success && result.data.additionalContext).toBeUndefined();
+  });
+
+  it("applies the same rules as the creation (US2)", () => {
+    const result = validateUpdateProject({ ...input, name: " ", domain: "x".repeat(81) });
+    expect(result).toEqual({
+      success: false,
+      fieldErrors: {
+        name: ["Project name is required"],
+        domain: ["Application domain must be at most 80 characters"],
+      },
+    });
   });
 });

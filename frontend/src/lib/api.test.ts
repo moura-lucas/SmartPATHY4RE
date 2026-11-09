@@ -8,9 +8,11 @@ import {
   generateRequirements,
   getPersonas,
   getRequirements,
+  deleteProject,
   deleteRequirement,
   listProjects,
   updatePersona,
+  updateProject,
   updateRequirement,
 } from "./api";
 import { GENERATION_ERROR_MESSAGES, GenerationError, SERVER_UNREACHABLE_MESSAGE } from "./generation";
@@ -272,5 +274,51 @@ describe("requirement editing (US14)", () => {
     mockFetch(404, { error: "x" });
 
     await expect(deleteRequirement("r1")).rejects.toThrow("no longer exists");
+  });
+});
+
+describe("project editing (US17)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const input = {
+    name: "New name",
+    domain: "Education",
+    description: "A description.",
+    additionalContext: undefined,
+  };
+
+  it("PATCHes the changes (AC17.1)", async () => {
+    const fetchMock = mockFetch(200, { id: "p1" });
+
+    await expect(updateProject("p1", input)).resolves.toEqual({ ok: true, project: { id: "p1" } });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/projects\/p1$/),
+      expect.objectContaining({ method: "PATCH", body: JSON.stringify(input) }),
+    );
+  });
+
+  it("returns the backend field errors on 400 (AC17.1)", async () => {
+    mockFetch(400, { error: "x", fieldErrors: { name: ["Project name is required"] } });
+
+    await expect(updateProject("p1", input)).resolves.toEqual({
+      ok: false,
+      fieldErrors: { name: ["Project name is required"] },
+    });
+  });
+
+  it("deletes a project (AC17.4)", async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(deleteProject("p1")).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/projects\/p1$/), {
+      method: "DELETE",
+    });
+  });
+
+  it("explains a project that no longer exists (AC17.5)", async () => {
+    mockFetch(404, { error: "x" });
+
+    await expect(deleteProject("p1")).rejects.toThrow("no longer exists");
   });
 });

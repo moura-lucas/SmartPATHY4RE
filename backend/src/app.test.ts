@@ -13,6 +13,8 @@ const projectRepository: ProjectRepository = {
   },
   findById: async () => null,
   listSummaries: async () => [],
+  update: async () => null,
+  remove: async () => false,
 };
 const personaRepository: PersonaRepository = {
   create: async () => {

@@ -12,18 +12,9 @@ import {
   type RequirementEditFieldErrors,
 } from "@smartpathy/shared";
 import { useRouter } from "next/navigation";
-import {
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-  type FormEvent,
-  type ReactNode,
-} from "react";
+import { useState, useTransition, type FormEvent, type ReactNode } from "react";
+import { DIALOG_CLASS, useModal } from "@/app/_dialog/modal";
 import { deleteRequirement, updateRequirement } from "@/lib/api";
-
-const DIALOG_CLASS =
-  "m-auto max-h-[85vh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-lg border border-zinc-200 bg-white p-6 text-zinc-900 shadow-xl backdrop:bg-black/50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100";
 
 /** AC14.1 / AC14.3: the dialogs are only mounted while open, so each opening starts fresh. */
 export function RequirementActions({ requirement }: { requirement: RequirementDto }) {
@@ -65,15 +56,6 @@ export function RequirementActions({ requirement }: { requirement: RequirementDt
       )}
     </div>
   );
-}
-
-/** Opens the native modal when mounted; `onClose` also fires for Escape. */
-function useModal(onClose: () => void) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    ref.current?.showModal();
-  }, []);
-  return { ref, onClose };
 }
 
 function EditDialog({

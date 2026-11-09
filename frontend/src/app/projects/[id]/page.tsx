@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPersonas, getProject } from "@/lib/api";
+import { getPersonas, getProject, getRequirements } from "@/lib/api";
 import { LEVEL_LABELS } from "@/lib/labels";
 import { ExportActions } from "./ExportActions";
 import { GeneratePersonaButton } from "./GeneratePersonaButton";
+import { ProjectActions } from "./ProjectActions";
 
 export default async function ProjectPage({
   params,
@@ -11,7 +12,13 @@ export default async function ProjectPage({
   const { id } = await params;
   const [project, personas] = await Promise.all([getProject(id), getPersonas(id)]);
   if (!project) notFound();
-  const hasPersona = (personas?.length ?? 0) > 0;
+  const personaCount = personas?.length ?? 0;
+  const hasPersona = personaCount > 0;
+  // AC17.3: the confirmation says how much is removed with the project.
+  const requirementLists = await Promise.all(
+    (personas ?? []).map((persona) => getRequirements(project.id, persona.id)),
+  );
+  const requirementCount = requirementLists.reduce((total, list) => total + (list?.length ?? 0), 0);
 
   const details: [string, string][] = [
     ["Application domain", project.domain],
@@ -35,6 +42,12 @@ export default async function ProjectPage({
           timeStyle: "short",
         })}
       </p>
+
+      <ProjectActions
+        project={project}
+        personaCount={personaCount}
+        requirementCount={requirementCount}
+      />
 
       <dl className="mt-8 flex flex-col gap-5">
         {details.map(([label, value]) => (
