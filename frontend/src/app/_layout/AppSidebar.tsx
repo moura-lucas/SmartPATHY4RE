@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { CloseIcon, FolderIcon, HomeIcon, MenuIcon, SettingsIcon, UserIcon } from "./icons";
 import { LogoutButton } from "./LogoutButton";
+import { SidebarResizer } from "./SidebarResizer";
 import { ThemeToggle } from "./ThemeToggle";
 
 const NAV_ITEMS = [
@@ -29,7 +30,7 @@ export function AppSidebar({ user }: { user: UserDto }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <aside className="flex shrink-0 flex-col border-b border-zinc-200 md:sticky md:top-0 md:h-screen md:w-60 md:border-r md:border-b-0 dark:border-zinc-800">
+    <aside className="flex shrink-0 flex-col border-b border-zinc-200 md:sticky md:top-0 md:h-screen md:w-(--sidebar-width) md:border-r md:border-b-0 dark:border-zinc-800">
       <div className="flex items-center justify-between px-5 py-4 md:py-5">
         <Link href="/" className="text-lg font-semibold" onClick={() => setMenuOpen(false)}>
           SmartPATHY
@@ -93,6 +94,8 @@ export function AppSidebar({ user }: { user: UserDto }) {
           <LogoutButton />
         </div>
       </div>
+
+      <SidebarResizer />
     </aside>
   );
 }

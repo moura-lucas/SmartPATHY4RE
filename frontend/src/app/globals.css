@@ -6,6 +6,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --sidebar-width: 240px;
   color-scheme: light;
 }
 
