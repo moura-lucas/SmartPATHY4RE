@@ -64,6 +64,12 @@ beforeEach(() => {
       personaAge: input.personaAge ?? null,
     })),
     findById: vi.fn(async (id) => (id === stored.id ? stored : null)),
+    update: vi.fn(async (id, input) =>
+      id === stored.id
+        ? { ...stored, ...input, additionalContext: input.additionalContext ?? null }
+        : null,
+    ),
+    remove: vi.fn(async (id) => id === stored.id),
     listSummaries: vi.fn(async (): Promise<ProjectSummaryDto[]> => [
       { ...stored, hasPersona: true, requirementsCount: 3, stage: "requirements_generated" },
     ]),
@@ -187,5 +193,66 @@ describe("GET /projects", () => {
     expect(res.body).toEqual([
       { ...stored, hasPersona: true, requirementsCount: 3, stage: "requirements_generated" },
     ]);
+  });
+});
+
+describe("PATCH /projects/:id (AC17.1)", () => {
+  const edit = {
+    name: "New name",
+    domain: "Education",
+    description: "A new description.",
+    additionalContext: "",
+  };
+
+  it("saves the changes and returns the project", async () => {
+    const res = await request(app()).patch("/projects/project-1").send(edit);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      name: "New name",
+      domain: "Education",
+      additionalContext: null,
+    });
+  });
+
+  it("does not change the persona data", async () => {
+    await request(app())
+      .patch("/projects/project-1")
+      .send({ ...edit, personaName: "Ana", techExperienceLevel: "high" });
+
+    const [, saved] = vi.mocked(repository.update).mock.calls[0]!;
+    expect(saved).not.toHaveProperty("personaName");
+    expect(saved).not.toHaveProperty("techExperienceLevel");
+  });
+
+  it("responds 400 with the field errors for invalid data", async () => {
+    const res = await request(app()).patch("/projects/project-1").send({ ...edit, name: " " });
+
+    expect(res.status).toBe(400);
+    expect(res.body.fieldErrors.name).toEqual(["Project name is required"]);
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it("responds 404 when the project does not exist", async () => {
+    const res = await request(app()).patch("/projects/missing").send(edit);
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Project not found." });
+  });
+});
+
+describe("DELETE /projects/:id (AC17.4 / AC17.5)", () => {
+  it("responds 204 when the project was removed", async () => {
+    const res = await request(app()).delete("/projects/project-1");
+
+    expect(res.status).toBe(204);
+    expect(repository.remove).toHaveBeenCalledWith("project-1");
+  });
+
+  it("responds 404 when the project does not exist", async () => {
+    const res = await request(app()).delete("/projects/missing");
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Project not found." });
   });
 });

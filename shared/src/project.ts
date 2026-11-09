@@ -58,6 +58,30 @@ export function validateCreateProject(input: unknown): CreateProjectValidation {
   };
 }
 
+/** AC17.1: what can be changed; the persona data belongs to each generated persona (US12). */
+export const updateProjectSchema = createProjectSchema.pick({
+  name: true,
+  domain: true,
+  description: true,
+  additionalContext: true,
+});
+export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
+export type UpdateProjectFieldErrors = Partial<Record<keyof UpdateProjectInput, string[]>>;
+
+export type UpdateProjectValidation =
+  | { success: true; data: UpdateProjectInput }
+  | { success: false; fieldErrors: UpdateProjectFieldErrors };
+
+/** Used by the frontend (before saving) and the backend (PATCH /projects/:id). */
+export function validateUpdateProject(input: unknown): UpdateProjectValidation {
+  const result = updateProjectSchema.safeParse(input ?? {});
+  if (result.success) return { success: true, data: result.data };
+  return {
+    success: false,
+    fieldErrors: z.flattenError(result.error).fieldErrors,
+  };
+}
+
 /** AC12.1: the profile of an additional persona; the application context comes from the project. */
 export const newPersonaSchema = createProjectSchema.pick({
   personaName: true,

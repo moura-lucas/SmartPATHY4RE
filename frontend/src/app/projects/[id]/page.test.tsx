@@ -1,19 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getPersonas, getProject } from "@/lib/api";
-import { buildPersona, buildProject } from "@/test/fixtures";
+import { getPersonas, getProject, getRequirements } from "@/lib/api";
+import { buildPersona, buildProject, buildRequirement } from "@/test/fixtures";
 import ProjectPage from "./page";
 
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api")>()),
   getProject: vi.fn(),
   getPersonas: vi.fn(),
+  getRequirements: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
   notFound: () => {
     throw new Error("NEXT_NOT_FOUND");
   },
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
 }));
 
 async function renderPage() {
@@ -24,6 +25,7 @@ describe("ProjectPage export", () => {
   beforeEach(() => {
     vi.mocked(getProject).mockResolvedValue(buildProject());
     vi.mocked(getPersonas).mockResolvedValue([buildPersona()]);
+    vi.mocked(getRequirements).mockResolvedValue([buildRequirement()]);
   });
 
   it("links to the export screen when the project has a persona (AC15.1)", async () => {
@@ -59,5 +61,19 @@ describe("ProjectPage export", () => {
 
     expect(screen.getByRole("button", { name: "Generate PATHY Persona" })).toBeEnabled();
     expect(screen.queryByRole("link", { name: "View personas" })).not.toBeInTheDocument();
+  });
+
+  it("offers editing and deleting the project (AC17.1 / AC17.3)", async () => {
+    await renderPage();
+
+    expect(screen.getByRole("button", { name: "Edit project" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Delete project" })).toBeEnabled();
+  });
+
+  it("is not found after the project was deleted (AC17.5)", async () => {
+    vi.mocked(getProject).mockResolvedValue(null);
+    vi.mocked(getPersonas).mockResolvedValue(null);
+
+    await expect(renderPage()).rejects.toThrow("NEXT_NOT_FOUND");
   });
 });

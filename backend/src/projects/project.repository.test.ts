@@ -18,13 +18,28 @@ function fakePrisma() {
   const project = {
     create: vi.fn(async () => row),
     findUnique: vi.fn(async (): Promise<typeof row | null> => row),
+    updateMany: vi.fn(async () => ({ count: 1 })),
     findMany: vi.fn(async () => [
       { ...row, id: "project-2", _count: { personas: 2, requirements: 16 } },
       { ...row, id: "project-3", _count: { personas: 1, requirements: 0 } },
       { ...row, _count: { personas: 0, requirements: 0 } },
     ]),
   };
-  return { project, prisma: { project } as unknown as PrismaClient };
+  const requirement = { deleteMany: vi.fn(() => "requirements") };
+  const persona = { deleteMany: vi.fn(() => "personas") };
+  Object.assign(project, { deleteMany: vi.fn(() => "project") });
+  const $transaction = vi.fn(async (_ops: unknown[]) => [
+    { count: 16 },
+    { count: 2 },
+    { count: 1 },
+  ]);
+  return {
+    project: project as typeof project & { deleteMany: ReturnType<typeof vi.fn> },
+    requirement,
+    persona,
+    $transaction,
+    prisma: { project, requirement, persona, $transaction } as unknown as PrismaClient,
+  };
 }
 
 describe("createProjectRepository", () => {
@@ -94,5 +109,52 @@ describe("createProjectRepository", () => {
     ]);
     expect(summaries[0]).toMatchObject({ name: "Clinic App", createdAt: "2026-10-09T12:00:00.000Z" });
     expect(summaries[0]).not.toHaveProperty("_count");
+  });
+});
+
+describe("createProjectRepository: editing and deleting (US17)", () => {
+  const input = {
+    name: "New name",
+    domain: "Education",
+    description: "New description.",
+    additionalContext: undefined,
+  };
+
+  it("changes only the editable fields, clearing an absent context (AC17.1)", async () => {
+    const { project, prisma } = fakePrisma();
+
+    const updated = await createProjectRepository(prisma).update("project-1", input);
+
+    expect(project.updateMany).toHaveBeenCalledWith({
+      where: { id: "project-1" },
+      data: { name: "New name", domain: "Education", description: "New description.", additionalContext: null },
+    });
+    expect(updated?.id).toBe("project-1");
+  });
+
+  it("returns null when the project does not exist", async () => {
+    const { project, prisma } = fakePrisma();
+    project.updateMany.mockResolvedValueOnce({ count: 0 });
+
+    await expect(createProjectRepository(prisma).update("missing", input)).resolves.toBeNull();
+  });
+
+  it("removes requirements, personas and project in one transaction (AC17.4)", async () => {
+    const { project, requirement, persona, $transaction, prisma } = fakePrisma();
+
+    await expect(createProjectRepository(prisma).remove("project-1")).resolves.toBe(true);
+
+    expect($transaction).toHaveBeenCalledTimes(1);
+    expect($transaction.mock.calls[0]![0]).toEqual(["requirements", "personas", "project"]);
+    expect(requirement.deleteMany).toHaveBeenCalledWith({ where: { projectId: "project-1" } });
+    expect(persona.deleteMany).toHaveBeenCalledWith({ where: { projectId: "project-1" } });
+    expect(project.deleteMany).toHaveBeenCalledWith({ where: { id: "project-1" } });
+  });
+
+  it("reports a project that does not exist", async () => {
+    const { $transaction, prisma } = fakePrisma();
+    $transaction.mockResolvedValueOnce([{ count: 0 }, { count: 0 }, { count: 0 }]);
+
+    await expect(createProjectRepository(prisma).remove("missing")).resolves.toBe(false);
   });
 });
