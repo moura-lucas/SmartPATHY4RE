@@ -11,7 +11,9 @@ import {
   type PersonaSections,
   type PersonaSectionsFieldErrors,
 } from "@smartpathy/shared";
+import { PencilIcon } from "@/app/_layout/icons";
 import { updatePersona } from "@/lib/api";
+import { SECTION_STYLES } from "./sectionStyles";
 
 function sectionsOf(persona: PersonaDto): PersonaSections {
   const { who, context, experienceWithTechnology, problems, existingSolutions } = persona;
@@ -42,6 +44,7 @@ export function PersonaSection({
   onSaved: (persona: PersonaDto) => void;
 }) {
   const fields = pathyFieldsOf(section);
+  const { icon: SectionIcon, tile, title, edit } = SECTION_STYLES[section];
   const headingId = `section-${section}`;
   const editButtonRef = useRef<HTMLButtonElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -102,7 +105,13 @@ export function PersonaSection({
       className="mt-8 border-t border-zinc-200 pt-6 dark:border-zinc-800"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id={headingId} className="text-lg font-semibold">
+        <h2 id={headingId} className={`flex items-center gap-3 text-lg font-semibold ${title}`}>
+          <span
+            aria-hidden="true"
+            className={`flex size-10 shrink-0 items-center justify-center rounded-lg border ${tile}`}
+          >
+            <SectionIcon className="size-6" />
+          </span>
           {label}
         </h2>
         {!editing && (
@@ -112,8 +121,9 @@ export function PersonaSection({
             onClick={startEditing}
             disabled={disabled}
             aria-label={`Edit ${label}`}
-            className="btn-secondary h-8 px-3 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`btn-secondary h-8 gap-1.5 px-3 disabled:cursor-not-allowed disabled:opacity-50 ${edit}`}
           >
+            <PencilIcon className="size-4" />
             Edit
           </button>
         )}

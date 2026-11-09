@@ -44,6 +44,14 @@ describe("PersonaPage", () => {
     ]);
   });
 
+  it("marks each section with its icon", async () => {
+    await renderPage();
+
+    for (const name of ["Who", "Context", "Experience with Technology", "Problems", "Existing Solutions"]) {
+      expect(screen.getByRole("heading", { name }).querySelector("svg")).toBeInTheDocument();
+    }
+  });
+
   it("explains where the persona came from", async () => {
     await renderPage();
     expect(screen.getByRole("region", { name: "About this persona" })).toHaveTextContent(
