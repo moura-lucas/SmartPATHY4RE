@@ -40,10 +40,24 @@ function href() {
 }
 
 describe("ExportForm", () => {
-  it("offers the available formats (AC15.1)", () => {
+  it("keeps the content selection when using the new formats (AC16.1)", () => {
+    renderForm();
+
+    fireEvent.click(screen.getByRole("radio", { name: "XLSX" }));
+    toggle("PATHY persona");
+
+    const url = href();
+    expect(url.searchParams.get("format")).toBe("xlsx");
+    expect(url.searchParams.get("include")).toBe("functional,non_functional");
+    expect(summary()).toMatchObject({ Total: 24 });
+  });
+
+  it("offers the available formats (AC15.1 / AC16.1)", () => {
     renderForm();
     expect(screen.getByRole("radio", { name: "JSON" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "PDF" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "DOCX" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "XLSX" })).toBeInTheDocument();
   });
 
   it("selects everything by default (AC15.2)", () => {

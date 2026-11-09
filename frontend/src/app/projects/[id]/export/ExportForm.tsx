@@ -19,7 +19,12 @@ export interface ExportablePersona {
   nonFunctionalCount: number;
 }
 
-const FORMAT_LABELS: Record<ExportFormat, string> = { json: "JSON", pdf: "PDF" };
+const FORMAT_LABELS: Record<ExportFormat, string> = {
+  json: "JSON",
+  pdf: "PDF",
+  docx: "DOCX",
+  xlsx: "XLSX",
+};
 
 const CONTENT_LABELS: Record<ExportContent, string> = {
   profile: "PATHY persona",

@@ -1,13 +1,32 @@
 import { Router } from "express";
-import { exportFileName, exportFormatSchema, exportSelectionSchema } from "@smartpathy/shared";
+import {
+  EXPORT_FORMATS,
+  exportFileName,
+  exportFormatSchema,
+  exportSelectionSchema,
+  type ExportFormat,
+  type ProjectExport,
+} from "@smartpathy/shared";
+import { renderDocx } from "./export.docx.js";
 import { renderJson } from "./export.json.js";
 import { renderPdf } from "./export.pdf.js";
 import type { ExportService } from "./export.service.js";
+import { renderXlsx } from "./export.xlsx.js";
 
-const CONTENT_TYPES = {
-  json: "application/json; charset=utf-8",
-  pdf: "application/pdf",
-} as const;
+type Renderer = (data: ProjectExport) => Buffer | Promise<Buffer>;
+
+const RENDERERS: Record<ExportFormat, { contentType: string; render: Renderer }> = {
+  json: { contentType: "application/json; charset=utf-8", render: renderJson },
+  pdf: { contentType: "application/pdf", render: renderPdf },
+  docx: {
+    contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    render: renderDocx,
+  },
+  xlsx: {
+    contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    render: renderXlsx,
+  },
+};
 
 const NOTHING_SELECTED = "Select at least one item to export.";
 
@@ -18,7 +37,9 @@ export function exportRoutes(service: ExportService) {
   router.get("/:id/export", async (req, res) => {
     const format = exportFormatSchema.safeParse(req.query.format);
     if (!format.success) {
-      res.status(400).json({ error: 'Unsupported export format. Use "json" or "pdf".' });
+      res.status(400).json({
+        error: `Unsupported export format. Use one of: ${EXPORT_FORMATS.join(", ")}.`,
+      });
       return;
     }
 
@@ -46,11 +67,12 @@ export function exportRoutes(service: ExportService) {
         return;
       case "ready": {
         const { data } = result;
-        const body = format.data === "json" ? renderJson(data) : await renderPdf(data);
+        const { contentType, render } = RENDERERS[format.data];
+        const body = await render(data);
         const fileName = exportFileName(data.project.name, new Date(data.exportedAt), format.data);
         res
           .status(200)
-          .type(CONTENT_TYPES[format.data])
+          .type(contentType)
           .attachment(fileName)
           .send(body);
       }

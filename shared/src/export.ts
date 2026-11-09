@@ -2,8 +2,8 @@ import { z } from "zod";
 import { personaSchema } from "./pathy.js";
 import { exportedRequirementSchema } from "./requirement.js";
 
-/** US9 / US10: formats of GET /projects/:id/export?format=... */
-export const EXPORT_FORMATS = ["json", "pdf"] as const;
+/** US9 / US10 / US16: formats of GET /projects/:id/export?format=... */
+export const EXPORT_FORMATS = ["json", "pdf", "docx", "xlsx"] as const;
 export const exportFormatSchema = z.enum(EXPORT_FORMATS);
 export type ExportFormat = z.infer<typeof exportFormatSchema>;
 

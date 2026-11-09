@@ -12,6 +12,8 @@ describe("exportFileName", () => {
   it("builds <project-name>-<date>.<format> (AC9.1 / AC10.1)", () => {
     expect(exportFileName("Clinic App", date, "json")).toBe("clinic-app-2026-10-26.json");
     expect(exportFileName("Clinic App", date, "pdf")).toBe("clinic-app-2026-10-26.pdf");
+    expect(exportFileName("Clinic App", date, "docx")).toBe("clinic-app-2026-10-26.docx");
+    expect(exportFileName("Clinic App", date, "xlsx")).toBe("clinic-app-2026-10-26.xlsx");
   });
 
   it("removes accents and characters that file systems reject", () => {
