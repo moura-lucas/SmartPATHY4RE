@@ -54,6 +54,8 @@ it.each<[LlmFailureKind, string]>([
   ["unavailable", "ai_unavailable"],
   ["rate_limited", "ai_rate_limited"],
   ["invalid_response", "ai_invalid_response"],
+  ["invalid_key", "ai_invalid_key"],
+  ["key_rate_limited", "ai_key_limit"],
 ])("responds 502 with code %s → %s and a plain-language message (AC11.3)", async (kind, code) => {
   const app = express();
   app.get("/boom", async () => {
@@ -66,5 +68,5 @@ it.each<[LlmFailureKind, string]>([
   const res = await request(app).get("/boom");
   expect(res.status).toBe(502);
   expect(res.body).toEqual({ code, error: expect.any(String) });
-  expect(res.body.error).not.toMatch(/Gemini|HTTP|429|JSON|schema/i);
+  expect(res.body.error).not.toMatch(/responded|HTTP|429|JSON|schema/i);
 });

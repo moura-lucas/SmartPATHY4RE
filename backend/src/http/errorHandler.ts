@@ -15,6 +15,14 @@ const GENERATION_ERRORS: Record<LlmFailureKind, GenerationErrorBody> = {
     code: "ai_invalid_response",
     error: "The AI returned an invalid response. Please try again.",
   },
+  invalid_key: {
+    code: "ai_invalid_key",
+    error: "Your Gemini key was not accepted. Please check it in Settings.",
+  },
+  key_rate_limited: {
+    code: "ai_key_limit",
+    error: "Your Gemini key has reached its usage limit.",
+  },
 };
 
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {

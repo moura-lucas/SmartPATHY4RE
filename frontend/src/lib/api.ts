@@ -1,5 +1,6 @@
 import type {
   CreateProjectFieldErrors,
+  GeminiKeyStatusDto,
   LoginInput,
   RegisterFieldErrors,
   RegisterInput,
@@ -61,6 +62,36 @@ async function apiFetch(
     throw new Error("Your session has expired. Please log in again.");
   }
   return response;
+}
+
+export async function getGeminiKeyStatus(): Promise<GeminiKeyStatusDto> {
+  const response = await apiFetch(`${API_URL}/account/gemini-key`, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Unexpected status ${response.status}`);
+  return response.json();
+}
+
+export type SaveGeminiKeyResult = { ok: true } | { ok: false; error: string };
+
+/** The backend checks the key with Google before saving it. */
+export async function saveGeminiKey(apiKey: string): Promise<SaveGeminiKeyResult> {
+  const response = await apiFetch(`${API_URL}/account/gemini-key`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ apiKey }),
+  });
+  if (response.status === 204) return { ok: true };
+  const body: { error?: string; fieldErrors?: { apiKey?: string[] } } = await response
+    .json()
+    .catch(() => ({}));
+  return {
+    ok: false,
+    error: body.fieldErrors?.apiKey?.[0] ?? body.error ?? "Could not save the key. Please try again.",
+  };
+}
+
+export async function deleteGeminiKey(): Promise<void> {
+  const response = await apiFetch(`${API_URL}/account/gemini-key`, { method: "DELETE" });
+  if (response.status !== 204) throw new Error("Could not remove the key. Please try again.");
 }
 
 export type RegisterResult =

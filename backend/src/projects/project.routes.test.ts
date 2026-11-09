@@ -1,3 +1,4 @@
+import { testAccount } from "../account/account.fixtures.js";
 import { TEST_USER, testAuth } from "../auth/auth.fixtures.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
@@ -49,7 +50,7 @@ let repository: ProjectRepository;
 
 function app() {
   return createApp({
-    auth: testAuth,
+    auth: testAuth, account: testAccount,
     llm,
     projectRepository: repository,
     personaRepository,

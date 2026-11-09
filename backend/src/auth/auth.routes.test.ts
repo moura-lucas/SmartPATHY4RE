@@ -1,3 +1,4 @@
+import { testAccount } from "../account/account.fixtures.js";
 import { SESSION_COOKIE } from "@smartpathy/shared";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -52,6 +53,7 @@ function buildApp(options = { cookieSecure: true }) {
   };
   const app = createApp({
     auth: createAuthModule(createAuthService({ repository, bcryptCost: 4 }), options),
+    account: testAccount,
     llm: new LlmService({ complete: async () => "{}" }),
     projectRepository,
     personaRepository: {} as PersonaRepository,

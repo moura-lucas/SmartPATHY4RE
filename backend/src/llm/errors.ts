@@ -1,5 +1,10 @@
 /** Cause of an LLM failure, shown to the user in plain language (AC11.3). */
-export type LlmFailureKind = "unavailable" | "rate_limited" | "invalid_response";
+export type LlmFailureKind =
+  | "unavailable"
+  | "rate_limited"
+  | "invalid_response"
+  | "invalid_key"
+  | "key_rate_limited";
 
 export class LlmError extends Error {
   override name = "LlmError";

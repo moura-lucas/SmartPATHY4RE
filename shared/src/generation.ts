@@ -7,6 +7,9 @@ export const GENERATION_ERROR_CODES = [
   "ai_unavailable",
   "ai_rate_limited",
   "ai_invalid_response",
+  "ai_invalid_key",
+  "ai_key_limit",
+  "ai_daily_limit",
 ] as const;
 export type GenerationErrorCode = (typeof GENERATION_ERROR_CODES)[number];
 

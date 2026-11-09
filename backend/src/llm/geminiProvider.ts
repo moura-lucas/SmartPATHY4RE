@@ -1,8 +1,11 @@
 import { LlmError } from "./errors.js";
 import type { LlmProvider, LlmRequest } from "./provider.js";
+import { currentUserKey } from "./requestKey.js";
 
 export const LLM_TIMEOUT_MS = 60_000;
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+
+export type KeyCheckResult = "valid" | "invalid" | "unavailable";
 
 export interface GeminiProviderConfig {
   apiKey: string;
@@ -29,7 +32,24 @@ export class GeminiProvider implements LlmProvider {
     this.fetch = config.fetch ?? globalThis.fetch;
   }
 
+  /** Lists the models, which proves the key works without spending generation quota. */
+  async checkKey(apiKey: string): Promise<KeyCheckResult> {
+    try {
+      const res = await this.fetch(`${BASE_URL}/models?pageSize=1`, {
+        headers: { "x-goog-api-key": apiKey },
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+      if (res.ok) return "valid";
+      return res.status === 400 || res.status === 401 || res.status === 403
+        ? "invalid"
+        : "unavailable";
+    } catch {
+      return "unavailable";
+    }
+  }
+
   async complete(req: LlmRequest): Promise<string> {
+    const userKey = currentUserKey();
     // z.toJSONSchema() adds "$schema", which Gemini doesn't need
     const { $schema: _ignored, ...schema } = req.jsonSchema;
     const url = `${BASE_URL}/models/${encodeURIComponent(this.config.model)}:generateContent`;
@@ -40,7 +60,7 @@ export class GeminiProvider implements LlmProvider {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": this.config.apiKey, // header, never a query string (avoids leaking it into logs)
+          "x-goog-api-key": userKey ?? this.config.apiKey, // header, never a query string (avoids leaking it into logs)
         },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: req.system }] },
@@ -52,7 +72,7 @@ export class GeminiProvider implements LlmProvider {
         }),
         signal: AbortSignal.timeout(this.timeoutMs), // AC1.6: cancels after 60s
       });
-      if (!res.ok) throw httpError(res.status);
+      if (!res.ok) throw await httpError(res, userKey !== undefined);
       data = (await res.json()) as GeminiResponse;
     } catch (err) {
       throw err instanceof LlmError ? err : toNetworkError(err);
@@ -89,13 +109,27 @@ export class GeminiProvider implements LlmProvider {
 }
 
 // Only the status goes into the message: the response body isn't logged or propagated
-function httpError(status: number): LlmError {
+async function httpError(res: Response, usingUserKey: boolean): Promise<LlmError> {
+  const { status } = res;
+  if (usingUserKey) {
+    if (status === 429) {
+      return new LlmError("Gemini responded with HTTP 429", false, { kind: "key_rate_limited" });
+    }
+    // Gemini answers 400 for a malformed or revoked key.
+    if (status === 401 || status === 403 || (status === 400 && (await isKeyRejection(res)))) {
+      return new LlmError(`Gemini responded with HTTP ${status}`, false, { kind: "invalid_key" });
+    }
+  }
   // 429 is not retried: with a daily quota, new attempts only spend more requests (AC11.3).
   if (status === 429) {
     return new LlmError("Gemini responded with HTTP 429", false, { kind: "rate_limited" });
   }
   const retryable = status === 408 || status >= 500;
   return new LlmError(`Gemini responded with HTTP ${status}`, retryable);
+}
+
+async function isKeyRejection(res: Response): Promise<boolean> {
+  return (await res.text().catch(() => "")).includes("API_KEY_INVALID");
 }
 
 function toNetworkError(err: unknown): LlmError {

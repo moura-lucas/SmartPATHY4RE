@@ -1,3 +1,4 @@
+import { testAccount } from "./account/account.fixtures.js";
 import { testAuth } from "./auth/auth.fixtures.js";
 import { it, expect } from "vitest";
 import request from "supertest";
@@ -44,7 +45,7 @@ const requirementRepository: RequirementRepository = {
   },
   deleteById: async () => false,
 };
-const deps = { auth: testAuth, llm, projectRepository, personaRepository, requirementRepository };
+const deps = { auth: testAuth, account: testAccount, llm, projectRepository, personaRepository, requirementRepository };
 
 it("GET /health responds with ok", async () => {
   const res = await request(createApp(deps)).get("/health");

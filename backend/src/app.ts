@@ -1,6 +1,7 @@
-import express from "express";
+import express, { Router } from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import type { AccountModule } from "./account/account.routes.js";
 import type { AuthModule } from "./auth/auth.routes.js";
 import type { LlmService } from "./llm/llmService.js";
 import { exportRoutes } from "./exports/export.routes.js";
@@ -18,6 +19,7 @@ import { createRequirementService } from "./requirements/requirement.service.js"
 
 export interface AppDeps {
   auth: AuthModule;
+  account: AccountModule;
   /** The origin allowed to call the API with credentials. */
   corsOrigin?: string;
   llm: LlmService;
@@ -29,8 +31,9 @@ export interface AppDeps {
 export function createApp(deps: AppDeps) {
   const app = express();
   app.set("trust proxy", 1); // Caddy: the rate limit must see the visitor's IP
-  // One limiter for both generation routes: they spend the same quota.
-  const generationLimit = generationRateLimit();
+  // One limiter for all generation routes: they spend the same quota. Router() runs
+  // both handlers as one, with the account's key active for the rest of the request.
+  const generationLimit = Router().use(generationRateLimit(), deps.account.generationAccess);
   app.use(cors({ origin: deps.corsOrigin ?? "http://localhost:3000", credentials: true }));
   app.use(express.json());
   app.use(cookieParser());
@@ -43,6 +46,8 @@ export function createApp(deps: AppDeps) {
 
   // AC18.3: everything below requires a session.
   app.use(deps.auth.requireAuth);
+
+  app.use("/account", deps.account.routes);
 
   // AC18.4: 404 rather than 403, so as not to reveal that it exists. Every route under
   // these paths goes through here, so the services can trust the ids they receive.

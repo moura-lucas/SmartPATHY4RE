@@ -1,3 +1,4 @@
+import { testAccount } from "../account/account.fixtures.js";
 import { testAuth } from "../auth/auth.fixtures.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
@@ -18,7 +19,7 @@ let requirementRepository: RequirementRepository;
 
 function app() {
   const llm = new LlmService({ complete }, { maxRetries: 0, baseDelayMs: 0 });
-  return createApp({ auth: testAuth, llm, projectRepository, personaRepository, requirementRepository });
+  return createApp({ auth: testAuth, account: testAccount, llm, projectRepository, personaRepository, requirementRepository });
 }
 
 beforeEach(() => {

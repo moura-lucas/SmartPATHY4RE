@@ -11,6 +11,9 @@ export function AppHeader({ user }: { user: UserDto }) {
         </Link>
         <div className="flex min-w-0 items-center gap-4 text-sm">
           <span className="truncate text-zinc-600 dark:text-zinc-400">{user.name}</span>
+          <Link href="/settings" className="shrink-0 underline hover:no-underline">
+            Settings
+          </Link>
           <LogoutButton />
         </div>
       </div>

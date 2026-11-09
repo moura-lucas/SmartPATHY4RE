@@ -4,3 +4,4 @@ export * from "./requirement.js";
 export * from "./export.js";
 export * from "./generation.js";
 export * from "./auth.js";
+export * from "./account.js";
