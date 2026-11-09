@@ -41,7 +41,7 @@ describe("ProjectList", () => {
     ]);
   });
 
-  it("continues each project at its next pending stage (AC8.3)", () => {
+  it("continues each project on its own screen, whatever its stage (AC8.3)", () => {
     render(
       <ProjectList
         projects={[
@@ -63,11 +63,11 @@ describe("ProjectList", () => {
     );
     expect(screen.getByRole("link", { name: "Continue With persona" })).toHaveAttribute(
       "href",
-      "/projects/persona/persona",
+      "/projects/persona",
     );
     expect(screen.getByRole("link", { name: "Continue With requirements" })).toHaveAttribute(
       "href",
-      "/projects/done/requirements",
+      "/projects/done",
     );
     expect(screen.getByText("1 requirement")).toBeInTheDocument();
   });
