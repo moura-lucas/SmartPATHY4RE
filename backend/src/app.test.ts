@@ -33,6 +33,11 @@ const requirementRepository: RequirementRepository = {
     throw new Error("not used");
   },
   findByPersonaId: async () => [],
+  findById: async () => null,
+  applyEdit: async () => {
+    throw new Error("not used");
+  },
+  deleteById: async () => false,
 };
 const deps = { llm, projectRepository, personaRepository, requirementRepository };
 

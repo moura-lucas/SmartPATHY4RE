@@ -1,4 +1,5 @@
 import { Router, type RequestHandler } from "express";
+import { validateRequirementEdit } from "@smartpathy/shared";
 import type { RequirementService } from "./requirement.service.js";
 
 export function requirementRoutes(
@@ -76,6 +77,40 @@ export function requirementRoutes(
       case "found":
         res.json(result.requirements);
     }
+  });
+
+  return router;
+}
+
+/** US14: a requirement is addressed by its own id, whichever persona it belongs to. */
+export function requirementItemRoutes(service: RequirementService) {
+  const router = Router();
+
+  // AC14.2: the shared schema is the same one the frontend checks before saving.
+  router.patch("/:id", async (req, res) => {
+    const validation = validateRequirementEdit(req.body);
+    if (!validation.success) {
+      res.status(400).json({
+        error: "Invalid requirement data.",
+        fieldErrors: validation.fieldErrors,
+      });
+      return;
+    }
+    const requirement = await service.edit(req.params.id, validation.data);
+    if (!requirement) {
+      res.status(404).json({ error: "Requirement not found." });
+      return;
+    }
+    res.json(requirement);
+  });
+
+  // AC14.3
+  router.delete("/:id", async (req, res) => {
+    if (!(await service.remove(req.params.id))) {
+      res.status(404).json({ error: "Requirement not found." });
+      return;
+    }
+    res.status(204).end();
   });
 
   return router;

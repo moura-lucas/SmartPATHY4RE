@@ -18,7 +18,7 @@ export function buildExport(overrides: Partial<ProjectExport> = {}): ProjectExpo
       additionalContext: "Über-Krankenhaus em São Paulo",
     },
     persona: buildPersona(),
-    requirements: buildRequirements(),
+    requirements: buildRequirements().map((req) => ({ ...req, edited: false })),
     ...overrides,
   };
 }

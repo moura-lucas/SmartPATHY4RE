@@ -57,7 +57,9 @@ function details(rows: [string, string][]): Content {
   };
 }
 
-function requirementsTable(type: RequirementType, requirements: Requirement[]): Content[] {
+const EDITED_MARK: Content = { text: "edited", italics: true, color: MUTED, fontSize: 7 };
+
+function requirementsTable(type: RequirementType, requirements: ProjectExport["requirements"]): Content[] {
   const title = `${REQUIREMENT_TYPE_LABELS[type]} requirements (${requirements.length})`;
   const header: TableCell[] = ["Code", "Description", "MoSCoW", "Priority", "Derived from"].map(
     (text) => ({ text, style: "tableHeader" }),
@@ -72,7 +74,8 @@ function requirementsTable(type: RequirementType, requirements: Requirement[]): 
     requirements.length === 0
       ? [[empty, {}, {}, {}, {}]]
       : requirements.map((req) => [
-          { text: req.code, bold: true },
+          // AC14.5
+          { stack: [{ text: req.code, bold: true }, ...(req.edited ? [EDITED_MARK] : [])] },
           req.description,
           MOSCOW_LABELS[req.moscow],
           PRIORITY_LABELS[req.priority],

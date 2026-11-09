@@ -42,6 +42,9 @@ model Persona {
   existingSolutions        Json
   createdAt                DateTime @default(now())
   updatedAt                DateTime      @updatedAt
+  // AC14.4: the highest numbers ever used, so a deleted code is never reused.
+  lastFunctionalNumber     Int           @default(0)
+  lastNonFunctionalNumber  Int           @default(0)
   requirements             Requirement[]
 
   @@index([projectId])
@@ -61,6 +64,7 @@ model Requirement {
   derivedFrom Json // PathyCode[]
   position    Int // order in which PATHY4RE generated it
   isNew       Boolean  @default(false) // AC13.5: part of the latest additional generation
+  edited      Boolean  @default(false) // AC14.5: changed by the user after generation
   createdAt   DateTime @default(now())
 
   @@unique([personaId, code]) // AC5.5

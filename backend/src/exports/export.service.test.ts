@@ -31,6 +31,9 @@ beforeEach(() => {
   requirements = {
     replaceAll: vi.fn(),
     append: vi.fn(),
+    findById: vi.fn(),
+    applyEdit: vi.fn(),
+    deleteById: vi.fn(),
     findByPersonaId: vi.fn(async () => buildRequirementDtos()),
   };
 });
@@ -50,7 +53,7 @@ describe("ExportService.load", () => {
           additionalContext: null,
         },
         persona: buildPersona(),
-        requirements: buildRequirements(),
+        requirements: buildRequirements().map((req) => ({ ...req, edited: false })),
       },
     });
   });
@@ -103,5 +106,15 @@ describe("ExportService.load", () => {
     await expect(service().load(project.id, "other")).resolves.toEqual({
       status: "persona_not_found",
     });
+  });
+
+  it("says which requirements the user edited (AC14.5)", async () => {
+    const [first, ...others] = buildRequirementDtos();
+    requirements.findByPersonaId = vi.fn(async () => [{ ...first!, edited: true }, ...others]);
+
+    const result = await service().load(project.id);
+    if (result.status !== "ready") throw new Error(result.status);
+
+    expect(result.data.requirements.map((req) => req.edited)).toEqual([true, false, false]);
   });
 });

@@ -32,6 +32,9 @@ beforeEach(() => {
   requirementRepository = {
     replaceAll: vi.fn(),
     append: vi.fn(),
+    findById: vi.fn(),
+    applyEdit: vi.fn(),
+    deleteById: vi.fn(),
     findByPersonaId: vi.fn(async () => buildRequirementDtos()),
   };
   return () => vi.useRealTimers();

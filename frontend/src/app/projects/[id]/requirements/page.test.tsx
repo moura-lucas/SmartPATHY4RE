@@ -10,6 +10,8 @@ vi.mock("@/lib/api", () => ({
   getRequirements: vi.fn(),
   generateRequirements: vi.fn(),
   generateMoreRequirements: vi.fn(),
+  updateRequirement: vi.fn(),
+  deleteRequirement: vi.fn(),
 }));
 
 const notFoundError = new Error("NEXT_NOT_FOUND");

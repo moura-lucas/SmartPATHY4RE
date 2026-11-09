@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { personaSchema } from "./pathy.js";
-import { requirementSchema } from "./requirement.js";
+import { exportedRequirementSchema } from "./requirement.js";
 
 /** US9 / US10: formats of GET /projects/:id/export?format=... */
 export const EXPORT_FORMATS = ["json", "pdf"] as const;
@@ -20,7 +20,7 @@ export const projectExportSchema = z.object({
     additionalContext: z.string().nullable(),
   }),
   persona: personaSchema,
-  requirements: z.array(requirementSchema),
+  requirements: z.array(exportedRequirementSchema),
 });
 export type ProjectExport = z.infer<typeof projectExportSchema>;
 

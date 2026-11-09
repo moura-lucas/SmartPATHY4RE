@@ -26,6 +26,9 @@ function app() {
   const requirementRepository: RequirementRepository = {
     replaceAll: vi.fn(),
     append: vi.fn(),
+    findById: vi.fn(),
+    applyEdit: vi.fn(),
+    deleteById: vi.fn(),
     findByPersonaId: vi.fn(),
   };
   return createApp({ llm, projectRepository, personaRepository, requirementRepository });

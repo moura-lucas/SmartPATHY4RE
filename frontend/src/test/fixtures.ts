@@ -79,6 +79,7 @@ export function buildRequirement(overrides: Partial<RequirementDto> = {}): Requi
     projectId: "project-1",
     personaId: "persona-1",
     isNew: false,
+    edited: false,
     createdAt: "2026-10-14T12:00:00.000Z",
     code,
     type: code.startsWith("NFR") ? "non_functional" : "functional",

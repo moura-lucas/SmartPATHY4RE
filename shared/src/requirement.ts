@@ -18,22 +18,20 @@ const CODE_PREFIX: Record<RequirementType, string> = {
   non_functional: "NFR",
 };
 
-export const requirementSchema = z
-  .object({
-    code: z.string().regex(/^N?FR\d+$/, "Expected a code like FR1 or NFR1"),
-    type: requirementTypeSchema,
-    description: z.string().trim().min(1),
-    moscow: moscowSchema,
-    priority: prioritySchema,
-    derivedFrom: z.array(pathyCodeSchema).min(1),
-  })
-  .refine(
-    (req) => new RegExp(`^${CODE_PREFIX[req.type]}\\d+$`).test(req.code),
-    {
-      message: "Code prefix does not match requirement type",
-      path: ["code"],
-    },
-  );
+const requirementFields = z.object({
+  code: z.string().regex(/^N?FR\d+$/, "Expected a code like FR1 or NFR1"),
+  type: requirementTypeSchema,
+  description: z.string().trim().min(1),
+  moscow: moscowSchema,
+  priority: prioritySchema,
+  derivedFrom: z.array(pathyCodeSchema).min(1),
+});
+
+const codeMatchesType = (req: { code: string; type: RequirementType }) =>
+  new RegExp(`^${CODE_PREFIX[req.type]}\\d+$`).test(req.code);
+const CODE_MISMATCH = { message: "Code prefix does not match requirement type", path: ["code"] };
+
+export const requirementSchema = requirementFields.refine(codeMatchesType, CODE_MISMATCH);
 export type Requirement = z.infer<typeof requirementSchema>;
 
 /**
@@ -108,21 +106,35 @@ export function canGenerateMoreRequirements(existingCount: number): boolean {
   );
 }
 
-/** AC13.3: renumbers new requirements so each type continues after its highest code in use. */
-export function continueRequirementCodes(
-  existingCodes: string[],
-  additions: Requirement[],
-): Requirement[] {
+/** The highest number used by each requirement type. */
+export type RequirementNumbers = Record<RequirementType, number>;
+
+export function highestRequirementNumbers(codes: string[]): RequirementNumbers {
   const highest = (type: RequirementType) =>
     Math.max(
       0,
-      ...existingCodes.flatMap((code) => {
+      ...codes.flatMap((code) => {
         const match = new RegExp(`^${CODE_PREFIX[type]}(\\d+)$`).exec(code);
         return match ? [Number(match[1])] : [];
       }),
     );
-  const next = { functional: highest("functional"), non_functional: highest("non_functional") };
-  return additions.map((req) => ({ ...req, code: `${CODE_PREFIX[req.type]}${++next[req.type]}` }));
+  return { functional: highest("functional"), non_functional: highest("non_functional") };
+}
+
+/**
+ * AC13.3 / AC14.4: renumbers new requirements after the highest numbers ever used,
+ * so a code that was deleted is not given to another requirement.
+ */
+export function continueRequirementCodes(
+  lastUsed: RequirementNumbers,
+  additions: Requirement[],
+): { requirements: Requirement[]; lastUsed: RequirementNumbers } {
+  const next = { ...lastUsed };
+  const requirements = additions.map((req) => ({
+    ...req,
+    code: `${CODE_PREFIX[req.type]}${++next[req.type]}`,
+  }));
+  return { requirements, lastUsed: next };
 }
 
 export const REQUIREMENT_TYPE_LABELS: Record<RequirementType, string> = {
@@ -143,6 +155,35 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
   low: "Low",
 };
 
+/** AC9.3 / AC14.5: a requirement in the exported file, saying whether the user changed it. */
+export const exportedRequirementSchema = requirementFields
+  .extend({ edited: z.boolean() })
+  .refine(codeMatchesType, CODE_MISMATCH);
+
+/** AC14.1: what the user can change; the code and the type are not part of it. */
+export const requirementEditSchema = z.object({
+  description: z.string({ error: "Description is required" }).trim().min(1, "Description is required"),
+  moscow: moscowSchema,
+  priority: prioritySchema,
+  derivedFrom: z
+    .array(pathyCodeSchema, { error: "Select at least one PATHY code" })
+    .min(1, "Select at least one PATHY code")
+    .transform((codes) => [...new Set(codes)]),
+});
+export type RequirementEdit = z.infer<typeof requirementEditSchema>;
+export type RequirementEditFieldErrors = Partial<Record<keyof RequirementEdit, string[]>>;
+
+export type RequirementEditValidation =
+  | { success: true; data: RequirementEdit }
+  | { success: false; fieldErrors: RequirementEditFieldErrors };
+
+/** AC14.2: used by the frontend (before saving) and the backend (PATCH /requirements/:id). */
+export function validateRequirementEdit(input: unknown): RequirementEditValidation {
+  const result = requirementEditSchema.safeParse(input ?? {});
+  if (result.success) return { success: true, data: result.data };
+  return { success: false, fieldErrors: z.flattenError(result.error).fieldErrors };
+}
+
 /** Requirement as returned by the API. */
 export type RequirementDto = Requirement & {
   id: string;
@@ -150,6 +191,8 @@ export type RequirementDto = Requirement & {
   personaId: string;
   /** AC13.5: part of the latest additional generation. */
   isNew: boolean;
+  /** AC14.5: changed by the user after generation. */
+  edited: boolean;
   createdAt: string; // ISO 8601
 };
 
