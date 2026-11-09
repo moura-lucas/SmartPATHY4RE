@@ -25,6 +25,19 @@ describe("Dashboard", () => {
     expect(screen.queryByRole("heading", { name: "Welcome to SmartPATHY" })).not.toBeInTheDocument();
   });
 
+  it("lists only the recent projects and links to the full list", async () => {
+    vi.mocked(listProjects).mockResolvedValue(
+      Array.from({ length: 7 }, (_, i) => buildProjectSummary({ id: `p${i}`, name: `Project ${i}` })),
+    );
+    await renderDashboard();
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+    expect(screen.getByRole("link", { name: /View all projects/ })).toHaveAttribute(
+      "href",
+      "/projects",
+    );
+  });
+
   it("links to the project creation form (AC8.4)", async () => {
     await renderDashboard();
     expect(screen.getByRole("link", { name: "New Project" })).toHaveAttribute(

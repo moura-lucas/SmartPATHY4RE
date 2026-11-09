@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { logout } from "@/lib/api";
+import { LogoutIcon } from "./icons";
 
 /** AC18.5 */
 export function LogoutButton() {
@@ -24,9 +25,11 @@ export function LogoutButton() {
       type="button"
       onClick={() => void handleClick()}
       disabled={leaving}
-      className="shrink-0 underline hover:no-underline disabled:cursor-not-allowed disabled:opacity-50"
+      aria-label="Log out"
+      title="Log out"
+      className="shrink-0 rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
     >
-      Log out
+      <LogoutIcon className="size-5" />
     </button>
   );
 }

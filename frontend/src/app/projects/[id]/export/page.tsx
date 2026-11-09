@@ -29,7 +29,7 @@ export default async function ExportPage({ params }: PageProps<"/projects/[id]/e
     <main className="mx-auto w-full max-w-2xl px-4 py-10">
       <Breadcrumb
         items={[
-          { label: "Projects", href: "/" },
+          { label: "Projects", href: "/projects" },
           { label: project.name, href: projectHref },
           { label: "Export" },
         ]}
