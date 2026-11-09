@@ -14,6 +14,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { DIALOG_CLASS, useModal } from "@/app/_dialog/modal";
+import { PencilIcon, TrashIcon } from "@/app/_layout/icons";
 import { deleteRequirement, updateRequirement } from "@/lib/api";
 
 /** AC14.1 / AC14.3: the dialogs are only mounted while open, so each opening starts fresh. */
@@ -28,24 +29,26 @@ export function RequirementActions({ requirement }: { requirement: RequirementDt
   }
 
   return (
-    <div className="flex gap-3 whitespace-nowrap">
+    <div className="flex gap-1 whitespace-nowrap">
       <button
         type="button"
         onClick={() => setOpen("edit")}
         disabled={refreshing}
         aria-label={`Edit ${requirement.code}`}
-        className="text-sm underline hover:no-underline disabled:cursor-not-allowed disabled:opacity-50"
+        title="Edit"
+        className="rounded-md p-1.5 text-brand hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-violet-300 dark:hover:bg-zinc-800"
       >
-        Edit
+        <PencilIcon className="size-4" />
       </button>
       <button
         type="button"
         onClick={() => setOpen("delete")}
         disabled={refreshing}
         aria-label={`Delete ${requirement.code}`}
-        className="text-sm text-red-600 underline hover:no-underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-400"
+        title="Delete"
+        className="rounded-md p-1.5 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-400 dark:hover:bg-zinc-800"
       >
-        Delete
+        <TrashIcon className="size-4" />
       </button>
 
       {open === "edit" && (
