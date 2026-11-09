@@ -56,8 +56,9 @@ describe("GET /projects/:id/export?format=json", () => {
     const file = JSON.parse(res.text);
 
     expect(projectExportSchema.safeParse(file).success).toBe(true);
-    expect(personaSchema.safeParse(file.persona).success).toBe(true);
-    expect(file.requirements.map((r: unknown) => requirementSchema.safeParse(r).success)).toEqual([
+    expect(personaSchema.safeParse(file.personas[0].profile).success).toBe(true);
+    const all = [...file.personas[0].functionalRequirements, ...file.personas[0].nonFunctionalRequirements];
+    expect(all.map((r: unknown) => requirementSchema.safeParse(r).success)).toEqual([
       true,
       true,
       true,
@@ -102,6 +103,19 @@ describe("GET /projects/:id/export?format=pdf", () => {
   });
 });
 
+describe("GET /projects/:id/export content selection (AC15.5)", () => {
+  it("contains only what was selected, omitting the rest", async () => {
+    const res = await request(app()).get(
+      "/projects/project-1/export?format=json&personas=persona-1&include=non_functional",
+    );
+    const [persona] = JSON.parse(res.text).personas;
+
+    expect(res.status).toBe(200);
+    expect(Object.keys(persona).sort()).toEqual(["name", "nonFunctionalRequirements"]);
+    expect(persona.nonFunctionalRequirements.map((r: { code: string }) => r.code)).toEqual(["NFR1"]);
+  });
+});
+
 describe("GET /projects/:id/export errors", () => {
   it.each(["json", "pdf"])(
     "responds 409 when the project has no persona (%s) (AC9.5 / AC10.5)",
@@ -115,10 +129,28 @@ describe("GET /projects/:id/export errors", () => {
     },
   );
 
-  it("responds 404 when the selected persona is not in the project", async () => {
-    const res = await request(app()).get("/projects/project-1/export?format=json&persona=other");
+  it("responds 404 when a chosen persona is not in the project", async () => {
+    const res = await request(app()).get("/projects/project-1/export?format=json&personas=other");
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: "Persona not found." });
+  });
+
+  it.each(["&include=", "&personas=", "&include=other"])(
+    "responds 400 when no content is selected (%s) (AC15.4)",
+    async (query) => {
+      const res = await request(app()).get(`/projects/project-1/export?format=json${query}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ error: "Select at least one item to export." });
+    },
+  );
+
+  it("responds 400 when the selection has no items (AC15.4)", async () => {
+    requirementRepository.findByPersonaId = vi.fn(async () => []);
+
+    const res = await request(app()).get("/projects/project-1/export?format=json&include=functional");
+
+    expect(res.status).toBe(400);
   });
 
   it("responds 404 when the project does not exist", async () => {

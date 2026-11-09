@@ -6,13 +6,13 @@ import {
   MOSCOW_LABELS,
   PATHY_SECTIONS,
   PRIORITY_LABELS,
-  REQUIREMENT_TYPES,
   REQUIREMENT_TYPE_LABELS,
   TECH_EXPERIENCE_LEVEL_LABELS,
   pathyAnswer,
   pathyFieldsOf,
+  type ExportedPersona,
+  type Persona,
   type ProjectExport,
-  type Requirement,
   type RequirementType,
 } from "@smartpathy/shared";
 
@@ -59,7 +59,9 @@ function details(rows: [string, string][]): Content {
 
 const EDITED_MARK: Content = { text: "edited", italics: true, color: MUTED, fontSize: 7 };
 
-function requirementsTable(type: RequirementType, requirements: ProjectExport["requirements"]): Content[] {
+type ExportedRequirements = NonNullable<ExportedPersona["functionalRequirements"]>;
+
+function requirementsTable(type: RequirementType, requirements: ExportedRequirements): Content[] {
   const title = `${REQUIREMENT_TYPE_LABELS[type]} requirements (${requirements.length})`;
   const header: TableCell[] = ["Code", "Description", "MoSCoW", "Priority", "Derived from"].map(
     (text) => ({ text, style: "tableHeader" }),
@@ -103,9 +105,64 @@ function requirementsTable(type: RequirementType, requirements: ProjectExport["r
   ];
 }
 
-/** AC10.2: header, persona by PATHY section, then one table per requirement type. */
+function personaProfile(profile: Persona, breakBefore: boolean): Content[] {
+  return [
+    {
+      text: `PATHY persona: ${profile.name}`,
+      style: "h2",
+      margin: [0, 24, 0, 10],
+      ...(breakBefore ? { pageBreak: "before" as const } : {}),
+    },
+    details([
+      ["Age", String(profile.age)],
+      ["Technology experience", TECH_EXPERIENCE_LEVEL_LABELS[profile.techExperienceLevel]],
+    ]),
+    ...PATHY_SECTIONS.flatMap(({ key, label }): Content[] => [
+      { text: label, style: "h3" },
+      ...pathyFieldsOf(key).map(
+        (field): Content => ({
+          unbreakable: true,
+          margin: [0, 0, 0, 8],
+          stack: [
+            {
+              text: [{ text: `${field.code}  `, bold: true }, field.label],
+              color: MUTED,
+              fontSize: 9,
+            },
+            { text: pathyAnswer(profile, field) },
+          ],
+        }),
+      ),
+    ]),
+  ];
+}
+
+function personaRequirements(persona: ExportedPersona, breakBefore: boolean): Content[] {
+  const { functionalRequirements: functional, nonFunctionalRequirements: nonFunctional } = persona;
+  if (!functional && !nonFunctional) return []; // AC15.5
+
+  const body: Content[] =
+    functional?.length === 0 && nonFunctional?.length === 0
+      ? // AC10.5: the persona alone, with a note.
+        [{ text: "Requirements have not been generated yet.", italics: true, color: MUTED }]
+      : [
+          ...(functional ? requirementsTable("functional", functional) : []),
+          ...(nonFunctional ? requirementsTable("non_functional", nonFunctional) : []),
+        ];
+
+  return [
+    {
+      text: `Requirements: ${persona.name}`,
+      style: "h2",
+      ...(breakBefore ? { pageBreak: "before" as const } : {}),
+    },
+    ...body,
+  ];
+}
+
+/** AC10.2 / AC15.5: header, then each chosen persona with only its selected sections. */
 export function buildPdfDocument(data: ProjectExport): TDocumentDefinitions {
-  const { project, persona, requirements } = data;
+  const { project, personas } = data;
 
   const header: Content[] = [
     { text: "PATHY persona and requirements report", color: MUTED, fontSize: 9 },
@@ -120,43 +177,10 @@ export function buildPdfDocument(data: ProjectExport): TDocumentDefinitions {
     ]),
   ];
 
-  const personaContent: Content[] = [
-    { text: `PATHY persona: ${persona.name}`, style: "h2", margin: [0, 24, 0, 10] },
-    details([
-      ["Age", String(persona.age)],
-      ["Technology experience", TECH_EXPERIENCE_LEVEL_LABELS[persona.techExperienceLevel]],
-    ]),
-    ...PATHY_SECTIONS.flatMap(({ key, label }): Content[] => [
-      { text: label, style: "h3" },
-      ...pathyFieldsOf(key).map(
-        (field): Content => ({
-          unbreakable: true,
-          margin: [0, 0, 0, 8],
-          stack: [
-            {
-              text: [{ text: `${field.code}  `, bold: true }, field.label],
-              color: MUTED,
-              fontSize: 9,
-            },
-            { text: pathyAnswer(persona, field) },
-          ],
-        }),
-      ),
-    ]),
-  ];
-
-  const requirementsContent: Content[] = [
-    { text: "Requirements", style: "h2", pageBreak: "before" },
-    ...(requirements.length === 0
-      ? // AC10.5: the persona alone, with a note.
-        [{ text: "Requirements have not been generated yet.", italics: true, color: MUTED }]
-      : REQUIREMENT_TYPES.flatMap((type) =>
-          requirementsTable(
-            type,
-            requirements.filter((req) => req.type === type),
-          ),
-        )),
-  ];
+  const body = personas.flatMap((persona, index): Content[] => [
+    ...(persona.profile ? personaProfile(persona.profile, index > 0) : []),
+    ...personaRequirements(persona, index > 0 || persona.profile !== undefined),
+  ]);
 
   return {
     pageSize: "A4", // AC10.3
@@ -176,7 +200,7 @@ export function buildPdfDocument(data: ProjectExport): TDocumentDefinitions {
       color: MUTED,
       margin: [0, 20, 0, 0],
     }),
-    content: [...header, ...personaContent, ...requirementsContent],
+    content: [...header, ...body],
   };
 }
 

@@ -26,20 +26,21 @@ describe("ProjectPage export", () => {
     vi.mocked(getPersonas).mockResolvedValue([buildPersona()]);
   });
 
-  it("offers the exports when the project has a persona (AC9.1 / AC10.1)", async () => {
+  it("links to the export screen when the project has a persona (AC15.1)", async () => {
     await renderPage();
 
     expect(getPersonas).toHaveBeenCalledWith("project-1");
-    expect(screen.getByRole("link", { name: "Export JSON" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Export PDF" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Export" })).toHaveAttribute(
+      "href",
+      "/projects/project-1/export",
+    );
   });
 
-  it("disables the exports when the project has no persona (AC9.5 / AC10.5)", async () => {
+  it("disables the export when the project has no persona (AC9.5 / AC10.5)", async () => {
     vi.mocked(getPersonas).mockResolvedValue([]);
     await renderPage();
 
-    expect(screen.getByRole("button", { name: "Export JSON" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Export PDF" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Export" })).toBeDisabled();
   });
 
   it("links to the personas instead of generating another one from here", async () => {
