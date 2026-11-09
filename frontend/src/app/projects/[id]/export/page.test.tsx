@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getPersonas, getProject, getRequirements } from "@/lib/api";
 import { buildPersona, buildProject, buildRequirement } from "@/test/fixtures";
@@ -36,8 +36,18 @@ describe("ExportPage", () => {
     await renderPage();
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Export");
-    expect(screen.getByRole("radio", { name: "PDF" })).toBeInTheDocument();
-    expect(screen.getByText("Total").nextElementSibling).toHaveTextContent("3");
+    expect(screen.getByRole("radio", { name: "Export as PDF" })).toBeInTheDocument();
+    expect(screen.getByText("Total Items").nextElementSibling).toHaveTextContent("3");
+  });
+
+  it("shows the application and the selected persona", async () => {
+    await renderPage();
+
+    const context = within(screen.getByRole("region", { name: "Export context" }));
+    expect(context.getByText("CareTrack")).toBeInTheDocument();
+    expect(context.getByText("Ana (Age: 34)")).toBeInTheDocument();
+    expect(context.getByText("Nurse")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Close" })).toHaveAttribute("href", "/projects/project-1");
   });
 
   it("does not offer the export without a persona", async () => {

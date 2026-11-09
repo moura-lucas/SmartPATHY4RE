@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { ProjectSummaryDto } from "@smartpathy/shared";
-import { continueHref } from "./continueHref";
 import { StageBadge } from "./StageBadge";
 
 function formatDate(iso: string): string {
@@ -48,7 +47,7 @@ export function ProjectList({
             </div>
             {/* AC8.3 */}
             <Link
-              href={continueHref(project)}
+              href={`/projects/${project.id}`}
               aria-label={`Continue ${project.name}`}
               className="btn-secondary shrink-0 self-start sm:self-auto"
             >
