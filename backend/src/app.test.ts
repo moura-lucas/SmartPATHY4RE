@@ -1,3 +1,4 @@
+import { testAuth } from "./auth/auth.fixtures.js";
 import { it, expect } from "vitest";
 import request from "supertest";
 import { createApp } from "./app.js";
@@ -13,6 +14,7 @@ const projectRepository: ProjectRepository = {
   },
   findById: async () => null,
   listSummaries: async () => [],
+  isOwnedBy: async () => false,
   update: async () => null,
   remove: async () => false,
 };
@@ -35,13 +37,14 @@ const requirementRepository: RequirementRepository = {
     throw new Error("not used");
   },
   findByPersonaId: async () => [],
+  isOwnedBy: async () => false,
   findById: async () => null,
   applyEdit: async () => {
     throw new Error("not used");
   },
   deleteById: async () => false,
 };
-const deps = { llm, projectRepository, personaRepository, requirementRepository };
+const deps = { auth: testAuth, llm, projectRepository, personaRepository, requirementRepository };
 
 it("GET /health responds with ok", async () => {
   const res = await request(createApp(deps)).get("/health");

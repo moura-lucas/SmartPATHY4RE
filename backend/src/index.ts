@@ -2,6 +2,9 @@ import { loadEnv, type Env } from "./config/env.js";
 import { GeminiProvider } from "./llm/geminiProvider.js";
 import { LlmService } from "./llm/llmService.js";
 import { createApp } from "./app.js";
+import { createAuthRepository } from "./auth/auth.repository.js";
+import { createAuthModule } from "./auth/auth.routes.js";
+import { createAuthService } from "./auth/auth.service.js";
 import { createPrismaClient } from "./lib/prisma.js";
 import { createPersonaRepository } from "./personas/persona.repository.js";
 import { createProjectRepository } from "./projects/project.repository.js";
@@ -19,7 +22,16 @@ const llm = new LlmService(
   new GeminiProvider({ apiKey: env.GEMINI_API_KEY, model: env.LLM_MODEL }),
 );
 const prisma = createPrismaClient(env.DATABASE_URL);
+const auth = createAuthModule(
+  createAuthService({
+    repository: createAuthRepository(prisma),
+    legacyOwnerEmail: env.LEGACY_OWNER_EMAIL,
+  }),
+  { cookieSecure: env.COOKIE_SECURE ?? process.env["NODE_ENV"] === "production" },
+);
 const app = createApp({
+  auth,
+  corsOrigin: env.CORS_ORIGIN,
   llm,
   projectRepository: createProjectRepository(prisma),
   personaRepository: createPersonaRepository(prisma),

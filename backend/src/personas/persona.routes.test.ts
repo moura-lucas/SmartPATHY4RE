@@ -1,3 +1,4 @@
+import { testAuth } from "../auth/auth.fixtures.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { PATHY_FIELDS } from "@smartpathy/shared";
@@ -29,9 +30,10 @@ function app() {
     findById: vi.fn(),
     applyEdit: vi.fn(),
     deleteById: vi.fn(),
+    isOwnedBy: vi.fn(async () => true),
     findByPersonaId: vi.fn(),
   };
-  return createApp({ llm, projectRepository, personaRepository, requirementRepository });
+  return createApp({ auth: testAuth, llm, projectRepository, personaRepository, requirementRepository });
 }
 
 beforeEach(() => {
@@ -40,6 +42,7 @@ beforeEach(() => {
     create: vi.fn(),
     findById: vi.fn(async (id) => (id === project.id ? project : null)),
     listSummaries: vi.fn(),
+    isOwnedBy: vi.fn(async () => true),
     update: vi.fn(),
     remove: vi.fn(),
   };

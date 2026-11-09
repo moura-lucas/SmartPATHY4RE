@@ -15,13 +15,13 @@ export function projectRoutes(repository: ProjectRepository) {
       });
       return;
     }
-    const project = await repository.create(validation.data);
+    const project = await repository.create(validation.data, req.user!.id);
     res.status(201).location(`/projects/${project.id}`).json(project);
   });
 
   // AC8.1 / AC8.2: the dashboard derives its indicators from this list.
-  router.get("/", async (_req, res) => {
-    res.json(await repository.listSummaries());
+  router.get("/", async (req, res) => {
+    res.json(await repository.listSummaries(req.user!.id));
   });
 
   router.get("/:id", async (req, res) => {

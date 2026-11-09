@@ -34,6 +34,8 @@ export interface RequirementRepository {
   /** Sorted by code: FR before NFR, then numerically (AC6.5). */
   findByPersonaId(personaId: string): Promise<RequirementDto[]>;
   findById(id: string): Promise<RequirementDto | null>;
+  /** AC18.4 */
+  isOwnedBy(id: string, userId: string): Promise<boolean>;
   /** AC14.1 / AC14.5: applies the user's changes and marks the requirement as edited. */
   applyEdit(id: string, edit: RequirementEdit): Promise<RequirementDto>;
   /** AC14.3: false when it no longer exists. The other requirements keep their codes (AC14.4). */
@@ -143,6 +145,9 @@ export function createRequirementRepository(
     },
     async findByPersonaId(personaId) {
       return sortedDtos(await byPosition(personaId));
+    },
+    async isOwnedBy(id, userId) {
+      return (await prisma.requirement.count({ where: { id, project: { userId } } })) > 0;
     },
     async findById(id) {
       const row = await prisma.requirement.findUnique({ where: { id } });

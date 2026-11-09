@@ -1,3 +1,4 @@
+import { TEST_USER, testAuth } from "../auth/auth.fixtures.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import type { ProjectDto, ProjectSummaryDto } from "@smartpathy/shared";
@@ -21,6 +22,7 @@ const requirementRepository: RequirementRepository = {
   findById: vi.fn(),
   applyEdit: vi.fn(),
   deleteById: vi.fn(),
+  isOwnedBy: vi.fn(),
   findByPersonaId: vi.fn(),
 };
 
@@ -47,6 +49,7 @@ let repository: ProjectRepository;
 
 function app() {
   return createApp({
+    auth: testAuth,
     llm,
     projectRepository: repository,
     personaRepository,
@@ -70,6 +73,7 @@ beforeEach(() => {
         : null,
     ),
     remove: vi.fn(async (id) => id === stored.id),
+    isOwnedBy: vi.fn(async () => true),
     listSummaries: vi.fn(async (): Promise<ProjectSummaryDto[]> => [
       { ...stored, hasPersona: true, requirementsCount: 3, stage: "requirements_generated" },
     ]),
@@ -89,6 +93,7 @@ describe("POST /projects", () => {
     });
     expect(repository.create).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Clinic App" }),
+      TEST_USER.id,
     );
   });
 
@@ -193,6 +198,7 @@ describe("GET /projects", () => {
     expect(res.body).toEqual([
       { ...stored, hasPersona: true, requirementsCount: 3, stage: "requirements_generated" },
     ]);
+    expect(repository.listSummaries).toHaveBeenCalledWith(TEST_USER.id);
   });
 });
 
@@ -254,5 +260,34 @@ describe("DELETE /projects/:id (AC17.4 / AC17.5)", () => {
 
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: "Project not found." });
+  });
+});
+
+describe("another user's project (AC18.4)", () => {
+  beforeEach(() => {
+    repository.isOwnedBy = vi.fn(async () => false);
+  });
+
+  it.each([
+    ["get", "/projects/project-1"],
+    ["patch", "/projects/project-1"],
+    ["delete", "/projects/project-1"],
+    ["get", "/projects/project-1/personas"],
+    ["post", "/projects/project-1/personas"],
+    ["put", "/projects/project-1/personas/persona-1"],
+    ["delete", "/projects/project-1/personas/persona-1"],
+    ["post", "/projects/project-1/generate-persona"],
+    ["get", "/projects/project-1/personas/persona-1/requirements"],
+    ["post", "/projects/project-1/personas/persona-1/generate-requirements"],
+    ["get", "/projects/project-1/export?format=json"],
+  ] as const)("%s %s responds 404, as if it did not exist", async (method, url) => {
+    const res = await request(app())[method](url).send({});
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Project not found." });
+    expect(repository.isOwnedBy).toHaveBeenCalledWith("project-1", TEST_USER.id);
+    expect(repository.findById).not.toHaveBeenCalled();
+    expect(repository.update).not.toHaveBeenCalled();
+    expect(repository.remove).not.toHaveBeenCalled();
   });
 });

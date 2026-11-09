@@ -43,6 +43,8 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:?}
       LLM_MODEL: ${LLM_MODEL:-gemini-3.5-flash}
       PORT: "4000"
+      CORS_ORIGIN: https://${DOMAIN:?}
+      LEGACY_OWNER_EMAIL: ${LEGACY_OWNER_EMAIL:-}
     depends_on:
       db: { condition: service_healthy }
     healthcheck:

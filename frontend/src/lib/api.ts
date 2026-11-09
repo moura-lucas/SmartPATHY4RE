@@ -1,5 +1,9 @@
 import type {
   CreateProjectFieldErrors,
+  LoginInput,
+  RegisterFieldErrors,
+  RegisterInput,
+  UserDto,
   CreateProjectInput,
   ExportContent,
   ExportFormat,
@@ -16,6 +20,7 @@ import type {
   RequirementEditFieldErrors,
 } from "@smartpathy/shared";
 import { isGenerationErrorCode } from "@smartpathy/shared";
+import { redirect } from "next/navigation";
 import {
   GENERATION_ERROR_MESSAGES,
   GenerationError,
@@ -29,6 +34,94 @@ export const API_URL =
   typeof window === "undefined"
     ? (process.env.API_INTERNAL_URL ?? PUBLIC_API_URL)
     : PUBLIC_API_URL;
+
+/** Server Components forward the visitor's cookie; the browser sends it by itself. */
+async function forwardedCookies(): Promise<HeadersInit> {
+  if (typeof window !== "undefined") return {};
+  const { cookies } = await import("next/headers");
+  const cookie = (await cookies()).toString();
+  return cookie ? { cookie } : {};
+}
+
+/** Any request to the API. AC18.3: an expired or missing session goes to the login screen. */
+async function apiFetch(
+  url: string,
+  init: RequestInit = {},
+  { redirectOn401 = true } = {},
+): Promise<Response> {
+  const headers = new Headers(init.headers);
+  new Headers(await forwardedCookies()).forEach((value, key) => headers.set(key, value));
+  const response = await fetch(url, { ...init, credentials: "include", headers });
+
+  if (response.status === 401 && redirectOn401) {
+    if (typeof window === "undefined") redirect("/login");
+    // Outside React, and a full reload also resets the signed-in header.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign("/login");
+    throw new Error("Your session has expired. Please log in again.");
+  }
+  return response;
+}
+
+export type RegisterResult =
+  | { ok: true; user: UserDto }
+  | { ok: false; fieldErrors: RegisterFieldErrors };
+
+/** AC18.1 */
+export async function register(input: RegisterInput): Promise<RegisterResult> {
+  const response = await apiFetch(
+    `${API_URL}/auth/register`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+    { redirectOn401: false },
+  );
+  if (response.status === 201) return { ok: true, user: await response.json() };
+  if (response.status === 400 || response.status === 409) {
+    const body = await response.json();
+    return { ok: false, fieldErrors: body.fieldErrors ?? {} };
+  }
+  if (response.status === 429) throw new Error("Too many attempts. Please try again later.");
+  throw new Error("Could not create the account. Please try again.");
+}
+
+/** AC18.2: false for wrong credentials. */
+export async function login(input: LoginInput): Promise<boolean> {
+  const response = await apiFetch(
+    `${API_URL}/auth/login`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+    { redirectOn401: false },
+  );
+  if (response.ok) return true;
+  if (response.status === 401) return false;
+  if (response.status === 429) throw new Error("Too many attempts. Please try again later.");
+  throw new Error("Could not log in. Please try again.");
+}
+
+/** AC18.5 */
+export async function logout(): Promise<void> {
+  await apiFetch(`${API_URL}/auth/logout`, { method: "POST" }, { redirectOn401: false });
+}
+
+/** The signed-in user, or null. Never redirects: the login screen uses it too. */
+export async function getCurrentUser(): Promise<UserDto | null> {
+  try {
+    const response = await apiFetch(
+      `${API_URL}/auth/me`,
+      { cache: "no-store" },
+      { redirectOn401: false },
+    );
+    return response.ok ? response.json() : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * AC9.1 / AC10.1: downloaded by the browser itself, so it always uses the public URL,
@@ -54,7 +147,7 @@ export type CreateProjectResult =
 export async function createProject(
   input: CreateProjectInput,
 ): Promise<CreateProjectResult> {
-  const response = await fetch(`${API_URL}/projects`, {
+  const response = await apiFetch(`${API_URL}/projects`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -71,13 +164,13 @@ export async function createProject(
 
 /** AC8.1: newest first, with each project's progress. */
 export async function listProjects(): Promise<ProjectSummaryDto[]> {
-  const response = await fetch(`${API_URL}/projects`, { cache: "no-store" });
+  const response = await apiFetch(`${API_URL}/projects`, { cache: "no-store" });
   if (!response.ok) throw new Error(`Unexpected status ${response.status}`);
   return response.json();
 }
 
 export async function getProject(id: string): Promise<ProjectDto | null> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_URL}/projects/${encodeURIComponent(id)}`,
     { cache: "no-store" },
   );
@@ -95,7 +188,7 @@ export async function updateProject(
   id: string,
   input: UpdateProjectInput,
 ): Promise<UpdateProjectResult> {
-  const response = await fetch(`${API_URL}/projects/${encodeURIComponent(id)}`, {
+  const response = await apiFetch(`${API_URL}/projects/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -113,7 +206,7 @@ export async function updateProject(
 
 /** AC17.4: the backend also removes the project's personas and requirements. */
 export async function deleteProject(id: string): Promise<void> {
-  const response = await fetch(`${API_URL}/projects/${encodeURIComponent(id)}`, {
+  const response = await apiFetch(`${API_URL}/projects/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
   if (response.status === 204) return;
@@ -125,7 +218,7 @@ export async function deleteProject(id: string): Promise<void> {
 
 /** AC4.1 / AC12.3: oldest first; empty when the project has no persona yet. Null when it does not exist. */
 export async function getPersonas(projectId: string): Promise<PersonaDto[] | null> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_URL}/projects/${encodeURIComponent(projectId)}/personas`,
     { cache: "no-store" },
   );
@@ -144,7 +237,7 @@ export async function updatePersona(
   personaId: string,
   sections: PersonaSections,
 ): Promise<UpdatePersonaResult> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_URL}/projects/${encodeURIComponent(projectId)}/personas/${encodeURIComponent(personaId)}`,
     {
       method: "PUT",
@@ -185,7 +278,7 @@ export async function createPersona(
 
 /** AC12.5: the backend also removes the persona's requirements. */
 export async function deletePersona(projectId: string, personaId: string): Promise<void> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_URL}/projects/${encodeURIComponent(projectId)}/personas/${encodeURIComponent(personaId)}`,
     { method: "DELETE" },
   );
@@ -200,7 +293,7 @@ export async function getRequirements(
   projectId: string,
   personaId: string,
 ): Promise<RequirementDto[] | null> {
-  const response = await fetch(
+  const response = await apiFetch(
     `${API_URL}/projects/${encodeURIComponent(projectId)}/personas/${encodeURIComponent(personaId)}/requirements`,
     { cache: "no-store" },
   );
@@ -232,7 +325,7 @@ export async function updateRequirement(
   id: string,
   edit: RequirementEdit,
 ): Promise<UpdateRequirementResult> {
-  const response = await fetch(`${API_URL}/requirements/${encodeURIComponent(id)}`, {
+  const response = await apiFetch(`${API_URL}/requirements/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(edit),
@@ -250,7 +343,7 @@ export async function updateRequirement(
 
 /** AC14.3 */
 export async function deleteRequirement(id: string): Promise<void> {
-  const response = await fetch(`${API_URL}/requirements/${encodeURIComponent(id)}`, {
+  const response = await apiFetch(`${API_URL}/requirements/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
   if (response.status === 204) return;
@@ -284,7 +377,7 @@ async function requestGeneration<T>(
 ): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await apiFetch(`${API_URL}${path}`, {
       method: "POST",
       ...(options.body === undefined
         ? {}

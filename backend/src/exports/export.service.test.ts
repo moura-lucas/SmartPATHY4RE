@@ -39,6 +39,7 @@ beforeEach(() => {
     create: vi.fn(),
     findById: vi.fn(async (id) => (id === project.id ? project : null)),
     listSummaries: vi.fn(),
+    isOwnedBy: vi.fn(async () => true),
     update: vi.fn(),
     remove: vi.fn(),
   };
@@ -49,6 +50,7 @@ beforeEach(() => {
     findById: vi.fn(),
     applyEdit: vi.fn(),
     deleteById: vi.fn(),
+    isOwnedBy: vi.fn(async () => true),
     findByPersonaId: vi.fn(async () => buildRequirementDtos()),
   };
 });

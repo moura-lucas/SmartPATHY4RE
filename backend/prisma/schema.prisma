@@ -14,8 +14,33 @@ datasource db {
   provider = "mysql"
 }
 
+model User {
+  id           String    @id @default(uuid())
+  name         String    @db.VarChar(120)
+  email        String    @unique @db.VarChar(191)
+  passwordHash String    @db.VarChar(100)
+  createdAt    DateTime  @default(now())
+  projects     Project[]
+  sessions     Session[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique @db.Char(64) // SHA-256 of the cookie value
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
 model Project {
   id                  String        @id @default(uuid())
+  // AC18.4: null only for projects created before accounts existed, which nobody can see
+  // until LEGACY_OWNER_EMAIL registers.
+  userId              String?
+  user                User?         @relation(fields: [userId], references: [id])
   name                String        @db.VarChar(120)
   domain              String        @db.VarChar(80)
   description         String        @db.Text
@@ -26,6 +51,8 @@ model Project {
   createdAt           DateTime      @default(now())
   personas            Persona[]
   requirements        Requirement[]
+
+  @@index([userId])
 }
 
 model Persona {
