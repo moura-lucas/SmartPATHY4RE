@@ -1,3 +1,4 @@
+import { testAuth } from "../auth/auth.fixtures.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { createApp } from "../app.js";
@@ -17,7 +18,7 @@ let requirementRepository: RequirementRepository;
 
 function app() {
   const llm = new LlmService({ complete }, { maxRetries: 0, baseDelayMs: 0 });
-  return createApp({ llm, projectRepository, personaRepository, requirementRepository });
+  return createApp({ auth: testAuth, llm, projectRepository, personaRepository, requirementRepository });
 }
 
 beforeEach(() => {
@@ -26,6 +27,7 @@ beforeEach(() => {
     create: vi.fn(),
     findById: vi.fn(async (id) => (id === project.id ? project : null)),
     listSummaries: vi.fn(),
+    isOwnedBy: vi.fn(async () => true),
     update: vi.fn(),
     remove: vi.fn(),
   };
@@ -44,6 +46,7 @@ beforeEach(() => {
       edited: true,
     })),
     deleteById: vi.fn(async (id) => id === "requirement-1"),
+    isOwnedBy: vi.fn(async () => true),
   };
 });
 
@@ -254,5 +257,31 @@ describe("DELETE /requirements/:id (AC14.3)", () => {
     const res = await request(app()).delete("/requirements/missing");
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe("another user's requirement (AC18.4)", () => {
+  beforeEach(() => {
+    requirementRepository.isOwnedBy = vi.fn(async () => false);
+  });
+
+  it("responds 404 to an edit, changing nothing", async () => {
+    const res = await request(app()).patch("/requirements/requirement-1").send({
+      description: "x",
+      moscow: "must",
+      priority: "low",
+      derivedFrom: ["C1"],
+    });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Requirement not found." });
+    expect(requirementRepository.applyEdit).not.toHaveBeenCalled();
+  });
+
+  it("responds 404 to a deletion, changing nothing", async () => {
+    const res = await request(app()).delete("/requirements/requirement-1");
+
+    expect(res.status).toBe(404);
+    expect(requirementRepository.deleteById).not.toHaveBeenCalled();
   });
 });

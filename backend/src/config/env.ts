@@ -5,6 +5,16 @@ const EnvSchema = z.object({
   GEMINI_API_KEY: z.string().trim().min(1),
   LLM_MODEL: z.string().min(1).default("gemini-3.5-flash"),
   PORT: z.coerce.number().int().positive().default(4000),
+  // The only origin the browser may call the API from with credentials.
+  CORS_ORIGIN: z.string().trim().min(1).default("http://localhost:3000"),
+  // AC18.2: on in production, off over plain HTTP in development.
+  COOKIE_SECURE: z.stringbool().optional(),
+  // Registering with this email claims the projects created before accounts existed.
+  LEGACY_OWNER_EMAIL: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => value || undefined),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

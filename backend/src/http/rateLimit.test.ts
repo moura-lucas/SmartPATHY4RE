@@ -28,4 +28,19 @@ describe("generationRateLimit", () => {
     expect(res.status).toBe(429);
     expect(res.body).toEqual({ code: "ai_rate_limited", error: expect.any(String) });
   });
+
+  it("counts per account, not per IP", async () => {
+    const server = express();
+    server.use((req, _res, next) => {
+      req.user = { id: String(req.headers["x-user"]), name: "x", email: "x@x.com" };
+      next();
+    });
+    server.post("/generate", generationRateLimit({ windowMs: 60_000, limit: 1 }), (_req, res) => {
+      res.status(201).json({ ok: true });
+    });
+
+    expect((await request(server).post("/generate").set("x-user", "a")).status).toBe(201);
+    expect((await request(server).post("/generate").set("x-user", "a")).status).toBe(429);
+    expect((await request(server).post("/generate").set("x-user", "b")).status).toBe(201);
+  });
 });

@@ -25,6 +25,7 @@ let requirements: {
   findById: ReturnType<typeof vi.fn<RequirementRepository["findById"]>>;
   applyEdit: ReturnType<typeof vi.fn<RequirementRepository["applyEdit"]>>;
   deleteById: ReturnType<typeof vi.fn<RequirementRepository["deleteById"]>>;
+  isOwnedBy: ReturnType<typeof vi.fn<RequirementRepository["isOwnedBy"]>>;
   findByPersonaId: ReturnType<typeof vi.fn<RequirementRepository["findByPersonaId"]>>;
 };
 
@@ -40,6 +41,7 @@ beforeEach(() => {
     create: vi.fn(),
     findById: vi.fn(async (id) => (id === project.id ? project : null)),
     listSummaries: vi.fn(),
+    isOwnedBy: vi.fn(async () => true),
     update: vi.fn(),
     remove: vi.fn(),
   };
@@ -61,6 +63,7 @@ beforeEach(() => {
       edited: true,
     })),
     deleteById: vi.fn<RequirementRepository["deleteById"]>(async (id) => id === "requirement-1"),
+    isOwnedBy: vi.fn<RequirementRepository["isOwnedBy"]>(async () => true),
     findByPersonaId: vi.fn<RequirementRepository["findByPersonaId"]>(async () =>
       buildRequirementDtos(),
     ),

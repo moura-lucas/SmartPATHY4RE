@@ -18,3 +18,14 @@ it("does not leak values ​​in the error message", () => {
     loadEnv({ DATABASE_URL: "mysql://user:secret-pass@db/x", GEMINI_API_KEY: "secret-key", PORT: "abc" }),
   ).not.toThrow(/secret-key|secret-pass/);
 });
+it("treats a blank LEGACY_OWNER_EMAIL as not set", () => {
+  expect(
+    loadEnv({ DATABASE_URL: "mysql://localhost/db", GEMINI_API_KEY: "k", LEGACY_OWNER_EMAIL: "" })
+      .LEGACY_OWNER_EMAIL,
+  ).toBeUndefined();
+});
+it("defaults the frontend origin for development", () => {
+  expect(loadEnv({ DATABASE_URL: "mysql://localhost/db", GEMINI_API_KEY: "k" }).CORS_ORIGIN).toBe(
+    "http://localhost:3000",
+  );
+});

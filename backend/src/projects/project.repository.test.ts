@@ -4,6 +4,7 @@ import { createProjectRepository } from "./project.repository.js";
 
 const row = {
   id: "project-1",
+  userId: "user-1" as string | null,
   name: "Clinic App",
   domain: "Healthcare",
   description: "App for nurses.",
@@ -19,6 +20,7 @@ function fakePrisma() {
     create: vi.fn(async () => row),
     findUnique: vi.fn(async (): Promise<typeof row | null> => row),
     updateMany: vi.fn(async () => ({ count: 1 })),
+    count: vi.fn(async () => 1),
     findMany: vi.fn(async () => [
       { ...row, id: "project-2", _count: { personas: 2, requirements: 16 } },
       { ...row, id: "project-3", _count: { personas: 1, requirements: 0 } },
@@ -53,10 +55,11 @@ describe("createProjectRepository", () => {
       additionalContext: undefined,
       personaName: undefined,
       techExperienceLevel: "low",
-    });
+    }, "user-1");
 
     expect(project.create).toHaveBeenCalledWith({
       data: {
+        userId: "user-1",
         name: "Clinic App",
         domain: "Healthcare",
         description: "App for nurses.",
@@ -66,7 +69,9 @@ describe("createProjectRepository", () => {
         techExperienceLevel: "low",
       },
     });
-    expect(created).toEqual({ ...row, createdAt: "2026-10-09T12:00:00.000Z" });
+    const { userId: _owner, ...publicFields } = row;
+    expect(created).toEqual({ ...publicFields, createdAt: "2026-10-09T12:00:00.000Z" });
+    expect(created).not.toHaveProperty("userId");
   });
 
   it("finds a project by id", async () => {
@@ -88,9 +93,10 @@ describe("createProjectRepository", () => {
   it("lists the projects newest first with their progress (AC8.1)", async () => {
     const { project, prisma } = fakePrisma();
 
-    const summaries = await createProjectRepository(prisma).listSummaries();
+    const summaries = await createProjectRepository(prisma).listSummaries("user-1");
 
     expect(project.findMany).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
       orderBy: { createdAt: "desc" },
       include: {
         _count: { select: { personas: true, requirements: true } },
@@ -109,6 +115,22 @@ describe("createProjectRepository", () => {
     ]);
     expect(summaries[0]).toMatchObject({ name: "Clinic App", createdAt: "2026-10-09T12:00:00.000Z" });
     expect(summaries[0]).not.toHaveProperty("_count");
+  });
+});
+
+describe("createProjectRepository: ownership (AC18.4)", () => {
+  it("checks the project against its owner", async () => {
+    const { project, prisma } = fakePrisma();
+
+    await expect(createProjectRepository(prisma).isOwnedBy("project-1", "user-1")).resolves.toBe(true);
+    expect(project.count).toHaveBeenCalledWith({ where: { id: "project-1", userId: "user-1" } });
+  });
+
+  it("reports a project of someone else", async () => {
+    const { project, prisma } = fakePrisma();
+    project.count.mockResolvedValueOnce(0);
+
+    await expect(createProjectRepository(prisma).isOwnedBy("project-1", "user-2")).resolves.toBe(false);
   });
 });
 

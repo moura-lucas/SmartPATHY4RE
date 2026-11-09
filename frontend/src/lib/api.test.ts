@@ -4,6 +4,10 @@ import {
   createPersona,
   deletePersona,
   generateMoreRequirements,
+  getCurrentUser,
+  login,
+  logout,
+  register,
   generatePersona,
   generateRequirements,
   getPersonas,
@@ -67,9 +71,7 @@ describe("listProjects", () => {
     const fetchMock = mockFetch(200, []);
 
     await expect(listProjects()).resolves.toEqual([]);
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/projects$/), {
-      cache: "no-store",
-    });
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/projects$/), expect.objectContaining({ cache: "no-store" }));
   });
 
   it("throws when the backend fails", async () => {
@@ -87,7 +89,7 @@ describe("generation requests (US11)", () => {
     await expect(generatePersona("project-1")).resolves.toEqual(buildPersona());
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringMatching(/\/projects\/project-1\/generate-persona$/),
-      { method: "POST" },
+      expect.objectContaining({ method: "POST" }),
     );
   });
 
@@ -153,7 +155,7 @@ describe("personas (US12)", () => {
     await expect(getPersonas("project-1")).resolves.toEqual([buildPersona()]);
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringMatching(/\/projects\/project-1\/personas$/),
-      { cache: "no-store" },
+      expect.objectContaining({ cache: "no-store" }),
     );
   });
 
@@ -181,7 +183,7 @@ describe("personas (US12)", () => {
     await expect(getRequirements("project-1", "persona-2")).resolves.toEqual([]);
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringMatching(/\/personas\/persona-2\/requirements$/),
-      { cache: "no-store" },
+      expect.objectContaining({ cache: "no-store" }),
     );
   });
 
@@ -192,7 +194,7 @@ describe("personas (US12)", () => {
     await expect(deletePersona("project-1", "persona-2")).resolves.toBeUndefined();
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringMatching(/\/personas\/persona-2$/),
-      { method: "DELETE" },
+      expect.objectContaining({ method: "DELETE" }),
     );
   });
 
@@ -215,7 +217,7 @@ describe("generateMoreRequirements (US13)", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringMatching(/\/personas\/persona-2\/generate-more-requirements$/),
-      { method: "POST" },
+      expect.objectContaining({ method: "POST" }),
     );
   });
 
@@ -265,9 +267,7 @@ describe("requirement editing (US14)", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(deleteRequirement("r1")).resolves.toBeUndefined();
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/requirements\/r1$/), {
-      method: "DELETE",
-    });
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/requirements\/r1$/), expect.objectContaining({ method: "DELETE" }));
   });
 
   it("explains a requirement that no longer exists", async () => {
@@ -311,14 +311,95 @@ describe("project editing (US17)", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(deleteProject("p1")).resolves.toBeUndefined();
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/projects\/p1$/), {
-      method: "DELETE",
-    });
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/projects\/p1$/), expect.objectContaining({ method: "DELETE" }));
   });
 
   it("explains a project that no longer exists (AC17.5)", async () => {
     mockFetch(404, { error: "x" });
 
     await expect(deleteProject("p1")).rejects.toThrow("no longer exists");
+  });
+});
+
+describe("session (US18)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const assign = vi.fn();
+
+  it("sends the session cookie with every request", async () => {
+    const fetchMock = mockFetch(200, []);
+
+    await listProjects();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("goes to the login screen when the session expired (AC18.3)", async () => {
+    mockFetch(401, { error: "Authentication required." });
+    vi.stubGlobal("location", { assign });
+
+    await expect(listProjects()).rejects.toThrow("session has expired");
+    expect(assign).toHaveBeenCalledWith("/login");
+  });
+
+  const account = { name: "Ana", email: "ana@example.com", password: "correct-horse" };
+
+  it("creates an account (AC18.1)", async () => {
+    mockFetch(201, { id: "user-1" });
+
+    await expect(register(account)).resolves.toEqual({ ok: true, user: { id: "user-1" } });
+  });
+
+  it.each([400, 409])("returns the field errors on %i (AC18.1)", async (status) => {
+    mockFetch(status, { fieldErrors: { email: ["This email is already registered."] } });
+
+    await expect(register(account)).resolves.toEqual({
+      ok: false,
+      fieldErrors: { email: ["This email is already registered."] },
+    });
+  });
+
+  it("logs in (AC18.2)", async () => {
+    mockFetch(200, { id: "user-1" });
+
+    await expect(login(account)).resolves.toBe(true);
+  });
+
+  it("reports wrong credentials without redirecting (AC18.2)", async () => {
+    mockFetch(401, { error: "Invalid email or password." });
+    vi.stubGlobal("location", { assign });
+    assign.mockClear();
+
+    await expect(login(account)).resolves.toBe(false);
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("explains the attempt limit", async () => {
+    mockFetch(429, { error: "x" });
+
+    await expect(login(account)).rejects.toThrow("Too many attempts");
+  });
+
+  it("logs out (AC18.5)", async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await logout();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/auth\/logout$/),
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("returns the signed-in user, or null without a session", async () => {
+    mockFetch(200, { id: "user-1" });
+    await expect(getCurrentUser()).resolves.toEqual({ id: "user-1" });
+
+    mockFetch(401, { error: "x" });
+    await expect(getCurrentUser()).resolves.toBeNull();
   });
 });

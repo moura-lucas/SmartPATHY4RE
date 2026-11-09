@@ -1,3 +1,4 @@
+import { testAuth } from "../auth/auth.fixtures.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { personaSchema, projectExportSchema, requirementSchema } from "@smartpathy/shared";
@@ -18,7 +19,7 @@ const accented = { ...project, name: "Gestão Clínica", domain: "Saúde" };
 
 function app() {
   const llm = new LlmService({ complete: async () => "{}" });
-  return createApp({ llm, projectRepository, personaRepository, requirementRepository });
+  return createApp({ auth: testAuth, llm, projectRepository, personaRepository, requirementRepository });
 }
 
 beforeEach(() => {
@@ -27,6 +28,7 @@ beforeEach(() => {
     create: vi.fn(),
     findById: vi.fn(async (id) => (id === project.id ? accented : null)),
     listSummaries: vi.fn(),
+    isOwnedBy: vi.fn(async () => true),
     update: vi.fn(),
     remove: vi.fn(),
   };
@@ -37,6 +39,7 @@ beforeEach(() => {
     findById: vi.fn(),
     applyEdit: vi.fn(),
     deleteById: vi.fn(),
+    isOwnedBy: vi.fn(async () => true),
     findByPersonaId: vi.fn(async () => buildRequirementDtos()),
   };
   return () => vi.useRealTimers();

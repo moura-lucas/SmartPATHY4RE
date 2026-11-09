@@ -22,6 +22,7 @@ function fakePrisma() {
     findUnique: vi.fn(async (): Promise<unknown> => rows[0]),
     update: vi.fn(async (_args: unknown): Promise<unknown> => ({ ...rows[0], edited: true })),
     deleteMany: vi.fn(async (): Promise<unknown> => ({ count: 1 })),
+    count: vi.fn(async () => 1),
   };
   const persona = {
     findUniqueOrThrow: vi.fn(async () => ({ lastFunctionalNumber: 8, lastNonFunctionalNumber: 2 })),
@@ -124,6 +125,15 @@ describe("createRequirementRepository", () => {
 
       expect(requirement.updateMany).not.toHaveBeenCalled();
       expect(requirement.createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  it("checks a requirement against the owner of its project (AC18.4)", async () => {
+    const { requirement, prisma } = fakePrisma();
+
+    await expect(createRequirementRepository(prisma).isOwnedBy("r1", "user-1")).resolves.toBe(true);
+    expect(requirement.count).toHaveBeenCalledWith({
+      where: { id: "r1", project: { userId: "user-1" } },
     });
   });
 

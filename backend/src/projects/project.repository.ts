@@ -9,17 +9,19 @@ import {
 import type { PrismaClient, Project } from "../generated/prisma/client.js";
 
 export interface ProjectRepository {
-  create(input: CreateProjectInput): Promise<ProjectDto>;
+  create(input: CreateProjectInput, userId: string): Promise<ProjectDto>;
+  /** AC18.4 */
+  isOwnedBy(id: string, userId: string): Promise<boolean>;
   findById(id: string): Promise<ProjectDto | null>;
   /** AC17.1: null when the project does not exist. */
   update(id: string, input: UpdateProjectInput): Promise<ProjectDto | null>;
   /** AC17.4: removes the project, personas and requirements together; false when not found. */
   remove(id: string): Promise<boolean>;
-  /** AC8.1: newest first, with each project's progress. */
-  listSummaries(): Promise<ProjectSummaryDto[]>;
+  /** AC8.1 / AC18.4: the user's projects, newest first, with each one's progress. */
+  listSummaries(userId: string): Promise<ProjectSummaryDto[]>;
 }
 
-function toDto(project: Project): ProjectDto {
+function toDto({ userId: _owner, ...project }: Project): ProjectDto {
   return {
     ...project,
     techExperienceLevel: project.techExperienceLevel as TechExperienceLevel,
@@ -31,9 +33,10 @@ export function createProjectRepository(
   prisma: PrismaClient,
 ): ProjectRepository {
   return {
-    async create(input) {
+    async create(input, userId) {
       const project = await prisma.project.create({
         data: {
+          userId,
           name: input.name,
           domain: input.domain,
           description: input.description,
@@ -45,6 +48,9 @@ export function createProjectRepository(
         },
       });
       return toDto(project);
+    },
+    async isOwnedBy(id, userId) {
+      return (await prisma.project.count({ where: { id, userId } })) > 0;
     },
     async findById(id) {
       const project = await prisma.project.findUnique({ where: { id } });
@@ -71,8 +77,9 @@ export function createProjectRepository(
       ]);
       return deleted.count > 0;
     },
-    async listSummaries() {
+    async listSummaries(userId) {
       const rows = await prisma.project.findMany({
+        where: { userId },
         orderBy: { createdAt: "desc" },
         include: {
           _count: { select: { personas: true, requirements: true } },
