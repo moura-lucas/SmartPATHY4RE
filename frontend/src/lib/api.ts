@@ -1,6 +1,7 @@
 import type {
   CreateProjectFieldErrors,
   CreateProjectInput,
+  ExportContent,
   ExportFormat,
   NewPersonaInput,
   PersonaDto,
@@ -31,9 +32,17 @@ export const API_URL =
  * AC9.1 / AC10.1: downloaded by the browser itself, so it always uses the public URL,
  * even when rendered on the server (where API_URL may be a Docker-internal address).
  */
-export function exportUrl(projectId: string, format: ExportFormat, personaId?: string): string {
-  const persona = personaId ? `&persona=${encodeURIComponent(personaId)}` : "";
-  return `${PUBLIC_API_URL}/projects/${encodeURIComponent(projectId)}/export?format=${format}${persona}`;
+export function exportUrl(
+  projectId: string,
+  format: ExportFormat,
+  selection: { personaIds: string[]; include: ExportContent[] },
+): string {
+  const query = new URLSearchParams({
+    format,
+    personas: selection.personaIds.join(","),
+    include: selection.include.join(","),
+  });
+  return `${PUBLIC_API_URL}/projects/${encodeURIComponent(projectId)}/export?${query}`;
 }
 
 export type CreateProjectResult =

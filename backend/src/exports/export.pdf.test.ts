@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildExport, pdfPages } from "./export.fixtures.js";
+import { buildExport, buildExportedPersona, pdfPages } from "./export.fixtures.js";
 import { buildPdfDocument, renderPdf } from "./export.pdf.js";
 
 describe("buildPdfDocument", () => {
@@ -41,18 +41,69 @@ describe("renderPdf", () => {
   });
 
   it("marks only the requirements the user edited (AC14.5)", async () => {
-    const base = buildExport();
-    const [first, ...others] = base.requirements;
+    const persona = buildExportedPersona();
+    const [first, ...others] = persona.functionalRequirements!;
 
-    const plain = (await pdfPages(await renderPdf(base))).join(" ");
+    const plain = (await pdfPages(await renderPdf(buildExport()))).join(" ");
     const marked = (
       await pdfPages(
-        await renderPdf({ ...base, requirements: [{ ...first!, edited: true }, ...others] }),
+        await renderPdf(
+          buildExport({
+            personas: [
+              { ...persona, functionalRequirements: [{ ...first!, edited: true }, ...others] },
+            ],
+          }),
+        ),
       )
     ).join(" ");
 
     expect(plain).not.toContain("edited");
     expect(marked).toContain("edited");
+  });
+
+  describe("content selection (AC15.5)", () => {
+    const render = async (...personas: ReturnType<typeof buildExportedPersona>[]) =>
+      (await pdfPages(await renderPdf(buildExport({ personas })))).join(" ");
+
+    it("leaves out the profile when it was deselected", async () => {
+      const { profile: _omit, ...persona } = buildExportedPersona();
+
+      const text = await render(persona);
+
+      expect(text).not.toContain("PATHY persona: Maria");
+      expect(text).not.toContain("Existing Solutions");
+      expect(text).toContain("Requirements: Maria");
+      expect(text).toContain("FR1");
+    });
+
+    it("leaves out a deselected requirement type", async () => {
+      const { nonFunctionalRequirements: _omit, ...persona } = buildExportedPersona();
+
+      const text = await render(persona);
+
+      expect(text).toContain("Functional requirements (2)");
+      expect(text).not.toContain("Non-functional requirements");
+    });
+
+    it("leaves out the requirements when both types were deselected", async () => {
+      const { functionalRequirements: _f, nonFunctionalRequirements: _n, ...persona } =
+        buildExportedPersona();
+
+      const text = await render(persona);
+
+      expect(text).toContain("PATHY persona: Maria");
+      expect(text).not.toContain("Requirements: Maria");
+    });
+
+    it("includes every chosen persona, in order", async () => {
+      const text = await render(
+        buildExportedPersona(),
+        buildExportedPersona({ name: "Bruno", profile: { ...buildExportedPersona().profile!, name: "Bruno" } }),
+      );
+
+      expect(text.indexOf("PATHY persona: Maria")).toBeLessThan(text.indexOf("PATHY persona: Bruno"));
+      expect(text.indexOf("Requirements: Maria")).toBeLessThan(text.indexOf("Requirements: Bruno"));
+    });
   });
 
   it("keeps accented and special characters (AC10.4)", async () => {
@@ -83,7 +134,11 @@ describe("renderPdf", () => {
       edited: false,
     }));
 
-    const pages = await pdfPages(await renderPdf(buildExport({ requirements })));
+    const pages = await pdfPages(
+      await renderPdf(
+        buildExport({ personas: [buildExportedPersona({ functionalRequirements: requirements })] }),
+      ),
+    );
 
     // Every row ends on the same page it starts on.
     for (let i = 1; i <= 40; i++) {
@@ -95,7 +150,10 @@ describe("renderPdf", () => {
   });
 
   it("notes that requirements were not generated yet (AC10.5)", async () => {
-    const text = (await pdfPages(await renderPdf(buildExport({ requirements: [] })))).join(" ");
+    const personas = [
+      buildExportedPersona({ functionalRequirements: [], nonFunctionalRequirements: [] }),
+    ];
+    const text = (await pdfPages(await renderPdf(buildExport({ personas })))).join(" ");
 
     expect(text).toContain("Existing Solutions");
     expect(text).toContain("Requirements have not been generated yet.");

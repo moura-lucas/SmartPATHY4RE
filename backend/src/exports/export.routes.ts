@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { exportFileName, exportFormatSchema } from "@smartpathy/shared";
+import { exportFileName, exportFormatSchema, exportSelectionSchema } from "@smartpathy/shared";
 import { renderJson } from "./export.json.js";
 import { renderPdf } from "./export.pdf.js";
 import type { ExportService } from "./export.service.js";
@@ -8,6 +8,8 @@ const CONTENT_TYPES = {
   json: "application/json; charset=utf-8",
   pdf: "application/pdf",
 } as const;
+
+const NOTHING_SELECTED = "Select at least one item to export.";
 
 export function exportRoutes(service: ExportService) {
   const router = Router();
@@ -20,8 +22,13 @@ export function exportRoutes(service: ExportService) {
       return;
     }
 
-    const personaId = typeof req.query.persona === "string" ? req.query.persona : undefined;
-    const result = await service.load(req.params.id, personaId);
+    const selection = exportSelectionSchema.safeParse(req.query);
+    if (!selection.success) {
+      res.status(400).json({ error: NOTHING_SELECTED }); // AC15.4
+      return;
+    }
+
+    const result = await service.load(req.params.id, selection.data);
     switch (result.status) {
       case "project_not_found":
         res.status(404).json({ error: "Project not found." });
@@ -33,6 +40,9 @@ export function exportRoutes(service: ExportService) {
         return;
       case "persona_not_found":
         res.status(404).json({ error: "Persona not found." });
+        return;
+      case "nothing_to_export":
+        res.status(400).json({ error: NOTHING_SELECTED }); // AC15.4
         return;
       case "ready": {
         const { data } = result;

@@ -56,7 +56,7 @@ export default async function ProjectPage({
         <GeneratePersonaButton projectId={project.id} />
       )}
 
-      <ExportActions projectId={project.id} personas={personas ?? []} />
+      <ExportActions projectId={project.id} hasPersona={hasPersona} />
     </main>
   );
 }

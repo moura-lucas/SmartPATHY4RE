@@ -1,11 +1,23 @@
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
-import type { ProjectExport } from "@smartpathy/shared";
+import type { ExportedPersona, ProjectExport } from "@smartpathy/shared";
 import { buildPersona } from "../personas/persona.fixtures.js";
 import { buildRequirements } from "../requirements/requirement.fixtures.js";
 
 // Test data shared by the export tests.
 
 export const EXPORTED_AT = "2026-10-26T15:30:00.000Z";
+
+/** One exported persona with every section. */
+export function buildExportedPersona(overrides: Partial<ExportedPersona> = {}): ExportedPersona {
+  const requirements = buildRequirements().map((req) => ({ ...req, edited: false }));
+  return {
+    name: "Maria",
+    profile: buildPersona(),
+    functionalRequirements: requirements.filter((req) => req.type === "functional"),
+    nonFunctionalRequirements: requirements.filter((req) => req.type === "non_functional"),
+    ...overrides,
+  };
+}
 
 /** Accented on purpose (AC9.4 / AC10.4). */
 export function buildExport(overrides: Partial<ProjectExport> = {}): ProjectExport {
@@ -17,8 +29,7 @@ export function buildExport(overrides: Partial<ProjectExport> = {}): ProjectExpo
       description: "Aplicação para enfermeiros registrarem sinais vitais — com acentuação.",
       additionalContext: "Über-Krankenhaus em São Paulo",
     },
-    persona: buildPersona(),
-    requirements: buildRequirements().map((req) => ({ ...req, edited: false })),
+    personas: [buildExportedPersona()],
     ...overrides,
   };
 }
