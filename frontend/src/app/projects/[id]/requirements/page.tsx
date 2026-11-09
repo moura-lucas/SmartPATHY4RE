@@ -31,7 +31,7 @@ export default async function RequirementsPage({
     <>
       <Breadcrumb
         items={[
-          { label: "Projects", href: "/" },
+          { label: "Projects", href: "/projects" },
           { label: project.name, href: `/projects/${project.id}` },
           { label: "Persona", href: personaHref },
           { label: "Requirements" },
