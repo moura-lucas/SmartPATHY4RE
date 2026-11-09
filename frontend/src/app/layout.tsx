@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { getCurrentUser } from "@/lib/api";
-import { AppHeader } from "./_layout/AppHeader";
+import { AppSidebar } from "./_layout/AppSidebar";
+import { THEME_INIT_SCRIPT } from "./_layout/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,10 +27,21 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        {/* Runs before the first paint so a saved dark theme does not flash white. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col">
-        {user && <AppHeader user={user} />}
-        {children}
+        {user ? (
+          <div className="flex min-h-screen flex-col md:flex-row">
+            <AppSidebar user={user} />
+            <div className="min-w-0 flex-1">{children}</div>
+          </div>
+        ) : (
+          children
+        )}
       </body>
     </html>
   );
