@@ -9,11 +9,6 @@
 		-Server
 	}
 
-	# Temporary shared password, until the application has its own login.
-	basic_auth {
-		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
-	}
-
 	handle_path /api/* {
 		reverse_proxy backend:4000
 	}
