@@ -9,6 +9,8 @@ import type {
   ProjectDto,
   ProjectSummaryDto,
   RequirementDto,
+  RequirementEdit,
+  RequirementEditFieldErrors,
 } from "@smartpathy/shared";
 import { isGenerationErrorCode } from "@smartpathy/shared";
 import {
@@ -171,6 +173,43 @@ export async function generateRequirements(
       fallback: "Could not generate the requirements. Please try again.",
     },
   );
+}
+
+export type UpdateRequirementResult =
+  | { ok: true; requirement: RequirementDto }
+  | { ok: false; fieldErrors: RequirementEditFieldErrors };
+
+/** AC14.2: the backend validates with the same shared schema (400 = field errors). */
+export async function updateRequirement(
+  id: string,
+  edit: RequirementEdit,
+): Promise<UpdateRequirementResult> {
+  const response = await fetch(`${API_URL}/requirements/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(edit),
+  });
+  if (response.ok) return { ok: true, requirement: await response.json() };
+  if (response.status === 400) {
+    const body = await response.json();
+    return { ok: false, fieldErrors: body.fieldErrors ?? {} };
+  }
+  if (response.status === 404) {
+    throw new Error("This requirement no longer exists. Reload the page.");
+  }
+  throw new Error("Could not save the changes. Please try again.");
+}
+
+/** AC14.3 */
+export async function deleteRequirement(id: string): Promise<void> {
+  const response = await fetch(`${API_URL}/requirements/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  if (response.status === 204) return;
+  if (response.status === 404) {
+    throw new Error("This requirement no longer exists. Reload the page.");
+  }
+  throw new Error("Could not delete the requirement. Please try again.");
 }
 
 /** AC13.1: adds to the requirements the persona already has. */

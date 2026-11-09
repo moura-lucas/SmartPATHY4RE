@@ -1,7 +1,7 @@
 import {
+  exportedRequirementSchema,
   personaSchema,
   projectExportSchema,
-  requirementSchema,
   type ProjectExport,
 } from "@smartpathy/shared";
 import type { PersonaRepository } from "../personas/persona.repository.js";
@@ -51,7 +51,7 @@ export function createExportService(deps: {
           additionalContext: project.additionalContext,
         },
         persona: personaSchema.parse(persona),
-        requirements: requirements.map((req) => requirementSchema.parse(req)),
+        requirements: requirements.map((req) => exportedRequirementSchema.parse(req)),
       });
       return { status: "ready", data };
     },

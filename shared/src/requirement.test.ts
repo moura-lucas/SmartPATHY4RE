@@ -4,6 +4,8 @@ import {
   additionalRequirementsSchema,
   canGenerateMoreRequirements,
   continueRequirementCodes,
+  highestRequirementNumbers,
+  validateRequirementEdit,
   compareRequirementCodes,
   isRequirementsOutdated,
   generatedRequirementsSchema,
@@ -159,31 +161,98 @@ describe("additional requirements (US13)", () => {
     });
   });
 
-  describe("continueRequirementCodes (AC13.3)", () => {
+  describe("continueRequirementCodes (AC13.3 / AC14.4)", () => {
     const requirement = (code: string, type: "functional" | "non_functional") =>
       requirementSchema.parse({ ...validRequirement, code, type });
 
-    it("continues each type after its highest code", () => {
-      const result = continueRequirementCodes(
-        ["FR1", "FR8", "NFR1", "NFR2"],
-        [requirement("FR1", "functional"), requirement("NFR1", "non_functional"), requirement("FR2", "functional")],
-      );
-      expect(result.map((r) => r.code)).toEqual(["FR9", "NFR3", "FR10"]);
-    });
-
-    it("orders numerically, not alphabetically", () => {
-      const [first] = continueRequirementCodes(["FR9", "FR10"], [requirement("FR1", "functional")]);
-      expect(first?.code).toBe("FR11");
-    });
-
-    it("does not confuse FR with NFR", () => {
-      const [first] = continueRequirementCodes(["NFR7"], [requirement("FR1", "functional")]);
-      expect(first?.code).toBe("FR1");
+    it("continues each type after the highest number used", () => {
+      const result = continueRequirementCodes({ functional: 8, non_functional: 2 }, [
+        requirement("FR1", "functional"),
+        requirement("NFR1", "non_functional"),
+        requirement("FR2", "functional"),
+      ]);
+      expect(result.requirements.map((r) => r.code)).toEqual(["FR9", "NFR3", "FR10"]);
+      expect(result.lastUsed).toEqual({ functional: 10, non_functional: 3 });
     });
 
     it("keeps the rest of the requirement", () => {
-      const [first] = continueRequirementCodes(["FR1"], [requirement("FR1", "functional")]);
-      expect(first).toMatchObject({ description: validRequirement.description, moscow: "must" });
+      const { requirements } = continueRequirementCodes(
+        { functional: 1, non_functional: 0 },
+        [requirement("FR1", "functional")],
+      );
+      expect(requirements[0]).toMatchObject({
+        description: validRequirement.description,
+        moscow: "must",
+      });
     });
+  });
+
+  describe("highestRequirementNumbers", () => {
+    it("orders numerically, not alphabetically", () => {
+      expect(highestRequirementNumbers(["FR9", "FR10", "NFR2"])).toEqual({
+        functional: 10,
+        non_functional: 2,
+      });
+    });
+
+    it("does not confuse FR with NFR", () => {
+      expect(highestRequirementNumbers(["NFR7"])).toEqual({ functional: 0, non_functional: 7 });
+    });
+  });
+});
+
+describe("validateRequirementEdit (US14)", () => {
+  const edit = {
+    description: "  The system shall record vital signs.  ",
+    moscow: "should",
+    priority: "low",
+    derivedFrom: ["C1", "P1"],
+  };
+
+  it("accepts a valid edit, trimming the description", () => {
+    expect(validateRequirementEdit(edit)).toEqual({
+      success: true,
+      data: { ...edit, description: "The system shall record vital signs." },
+    });
+  });
+
+  it("ignores the code and the type (AC14.1)", () => {
+    const result = validateRequirementEdit({ ...edit, code: "FR99", type: "non_functional" });
+    expect(result.success && Object.keys(result.data).sort()).toEqual([
+      "derivedFrom",
+      "description",
+      "moscow",
+      "priority",
+    ]);
+  });
+
+  it("rejects an empty description, on its field (AC14.2)", () => {
+    const result = validateRequirementEdit({ ...edit, description: "   " });
+    expect(result).toEqual({
+      success: false,
+      fieldErrors: { description: ["Description is required"] },
+    });
+  });
+
+  it("rejects an empty derived from, on its field (AC14.2)", () => {
+    const result = validateRequirementEdit({ ...edit, derivedFrom: [] });
+    expect(result).toEqual({
+      success: false,
+      fieldErrors: { derivedFrom: ["Select at least one PATHY code"] },
+    });
+  });
+
+  it("rejects unknown PATHY codes (AC14.1)", () => {
+    expect(validateRequirementEdit({ ...edit, derivedFrom: ["X9"] }).success).toBe(false);
+  });
+
+  it("removes repeated PATHY codes", () => {
+    const result = validateRequirementEdit({ ...edit, derivedFrom: ["C1", "C1"] });
+    expect(result.success && result.data.derivedFrom).toEqual(["C1"]);
+  });
+
+  it("rejects an unknown MoSCoW or priority", () => {
+    expect(validateRequirementEdit({ ...edit, moscow: "maybe" }).success).toBe(false);
+    expect(validateRequirementEdit({ ...edit, priority: "urgent" }).success).toBe(false);
   });
 });

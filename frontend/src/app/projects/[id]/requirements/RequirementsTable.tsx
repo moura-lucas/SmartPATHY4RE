@@ -1,8 +1,9 @@
 import { MOSCOW_LABELS, type RequirementDto } from "@smartpathy/shared";
 import { PathyCodeTooltip } from "./PathyCodeTooltip";
 import { PriorityBadge } from "./PriorityBadge";
+import { RequirementActions } from "./RequirementActions";
 
-const COLUMNS = ["Code", "Description", "MoSCoW", "Priority", "Derived from"];
+const COLUMNS = ["Code", "Description", "MoSCoW", "Priority", "Derived from", "Actions"];
 
 /** AC6.3 / AC6.4: one table per requirement type, already sorted by code (AC6.5). */
 export function RequirementsTable({
@@ -49,6 +50,12 @@ export function RequirementsTable({
                         New
                       </span>
                     )}
+                    {/* AC14.5 */}
+                    {req.edited && (
+                      <span className="ml-2 rounded bg-sky-100 px-1.5 py-0.5 font-sans text-xs font-medium text-sky-800 dark:bg-sky-900/50 dark:text-sky-200">
+                        Edited
+                      </span>
+                    )}
                   </th>
                   <td className="px-3 py-3 whitespace-pre-wrap break-words">{req.description}</td>
                   <td className="px-3 py-3 whitespace-nowrap">{MOSCOW_LABELS[req.moscow]}</td>
@@ -63,6 +70,9 @@ export function RequirementsTable({
                         </li>
                       ))}
                     </ul>
+                  </td>
+                  <td className="px-3 py-3">
+                    <RequirementActions requirement={req} />
                   </td>
                 </tr>
               ))

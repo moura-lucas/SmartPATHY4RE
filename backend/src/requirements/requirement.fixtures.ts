@@ -42,6 +42,7 @@ export function buildRequirementDtos(
     projectId,
     personaId,
     isNew: false,
+    edited: false,
     createdAt: "2026-10-14T12:00:00.000Z",
   }));
 }

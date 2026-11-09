@@ -22,6 +22,9 @@ let personas: PersonaRepository;
 let requirements: {
   replaceAll: ReturnType<typeof vi.fn<RequirementRepository["replaceAll"]>>;
   append: ReturnType<typeof vi.fn<RequirementRepository["append"]>>;
+  findById: ReturnType<typeof vi.fn<RequirementRepository["findById"]>>;
+  applyEdit: ReturnType<typeof vi.fn<RequirementRepository["applyEdit"]>>;
+  deleteById: ReturnType<typeof vi.fn<RequirementRepository["deleteById"]>>;
   findByPersonaId: ReturnType<typeof vi.fn<RequirementRepository["findByPersonaId"]>>;
 };
 
@@ -47,6 +50,15 @@ beforeEach(() => {
       status: "appended",
       requirements: buildRequirementDtos(projectId, id),
     })),
+    findById: vi.fn<RequirementRepository["findById"]>(async (id) =>
+      id === "requirement-1" ? buildRequirementDtos()[0]! : null,
+    ),
+    applyEdit: vi.fn<RequirementRepository["applyEdit"]>(async (_id, edit) => ({
+      ...buildRequirementDtos()[0]!,
+      ...edit,
+      edited: true,
+    })),
+    deleteById: vi.fn<RequirementRepository["deleteById"]>(async (id) => id === "requirement-1"),
     findByPersonaId: vi.fn<RequirementRepository["findByPersonaId"]>(async () =>
       buildRequirementDtos(),
     ),
@@ -245,6 +257,61 @@ describe("RequirementService.generateMore", () => {
       status: "persona_not_found",
     });
     expect(provider.complete).not.toHaveBeenCalled();
+  });
+});
+
+describe("RequirementService.edit (AC14.1 / AC14.5)", () => {
+  const current = buildRequirementDtos()[0]!;
+  const same = {
+    description: current.description,
+    moscow: current.moscow,
+    priority: current.priority,
+    derivedFrom: current.derivedFrom,
+  };
+
+  it("saves a change and returns the edited requirement", async () => {
+    const edit = { ...same, description: "New text." };
+
+    await expect(service().edit("requirement-1", edit)).resolves.toMatchObject({
+      description: "New text.",
+      edited: true,
+      code: current.code,
+    });
+    expect(requirements.applyEdit).toHaveBeenCalledWith("requirement-1", edit);
+  });
+
+  it("does not mark as edited when nothing changed", async () => {
+    await expect(service().edit("requirement-1", same)).resolves.toEqual(current);
+    expect(requirements.applyEdit).not.toHaveBeenCalled();
+  });
+
+  it("treats a different order of the same codes as no change", async () => {
+    const edit = { ...same, derivedFrom: [...same.derivedFrom].reverse() };
+
+    await service().edit("requirement-1", edit);
+
+    expect(requirements.applyEdit).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["moscow", { moscow: "wont" as const }],
+    ["priority", { priority: "low" as const }],
+    ["derived from", { derivedFrom: ["W1" as const] }],
+  ])("detects a change in %s", async (_name, change) => {
+    await service().edit("requirement-1", { ...same, ...change });
+
+    expect(requirements.applyEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns null for an unknown requirement", async () => {
+    await expect(service().edit("missing", same)).resolves.toBeNull();
+  });
+});
+
+describe("RequirementService.remove (AC14.3)", () => {
+  it("reports whether the requirement existed", async () => {
+    await expect(service().remove("requirement-1")).resolves.toBe(true);
+    await expect(service().remove("missing")).resolves.toBe(false);
   });
 });
 

@@ -40,6 +40,21 @@ describe("renderPdf", () => {
     expect(text).toContain("P1, P2");
   });
 
+  it("marks only the requirements the user edited (AC14.5)", async () => {
+    const base = buildExport();
+    const [first, ...others] = base.requirements;
+
+    const plain = (await pdfPages(await renderPdf(base))).join(" ");
+    const marked = (
+      await pdfPages(
+        await renderPdf({ ...base, requirements: [{ ...first!, edited: true }, ...others] }),
+      )
+    ).join(" ");
+
+    expect(plain).not.toContain("edited");
+    expect(marked).toContain("edited");
+  });
+
   it("keeps accented and special characters (AC10.4)", async () => {
     const text = (await pdfPages(await renderPdf(buildExport()))).join(" ");
 
@@ -65,6 +80,7 @@ describe("renderPdf", () => {
       moscow: "must" as const,
       priority: "high" as const,
       derivedFrom: ["C1" as const],
+      edited: false,
     }));
 
     const pages = await pdfPages(await renderPdf(buildExport({ requirements })));

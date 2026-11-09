@@ -4,6 +4,7 @@ import {
   generatedRequirementsSchema,
   type PersonaDto,
   type RequirementDto,
+  type RequirementEdit,
 } from "@smartpathy/shared";
 import type { LlmService } from "../llm/llmService.js";
 import type { PersonaRepository } from "../personas/persona.repository.js";
@@ -33,8 +34,21 @@ export interface RequirementService {
   generate(projectId: string, personaId: string): Promise<GenerateRequirementsResult>;
   /** AC13.1: adds requirements to the ones the persona already has. */
   generateMore(projectId: string, personaId: string): Promise<GenerateMoreRequirementsResult>;
+  /** AC14.1: null when it does not exist. Saving without changes does not mark it as edited. */
+  edit(id: string, edit: RequirementEdit): Promise<RequirementDto | null>;
+  /** AC14.3: false when it does not exist. */
+  remove(id: string): Promise<boolean>;
   /** AC12.4: the requirements of one persona. */
   list(projectId: string, personaId: string): Promise<ListRequirementsResult>;
+}
+
+function isSameContent(current: RequirementDto, edit: RequirementEdit): boolean {
+  return (
+    current.description === edit.description &&
+    current.moscow === edit.moscow &&
+    current.priority === edit.priority &&
+    [...current.derivedFrom].sort().join() === [...edit.derivedFrom].sort().join()
+  );
 }
 
 export function createRequirementService(deps: {
@@ -92,6 +106,16 @@ export function createRequirementService(deps: {
       return result.status === "appended"
         ? { status: "generated", requirements: result.requirements }
         : result;
+    },
+
+    async edit(id, edit) {
+      const current = await deps.requirements.findById(id);
+      if (!current) return null;
+      return isSameContent(current, edit) ? current : deps.requirements.applyEdit(id, edit);
+    },
+
+    remove(id) {
+      return deps.requirements.deleteById(id);
     },
 
     async list(projectId, personaId) {

@@ -1,7 +1,10 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildRequirement } from "@/test/fixtures";
 import { RequirementsTable } from "./RequirementsTable";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock("@/lib/api", () => ({ updateRequirement: vi.fn(), deleteRequirement: vi.fn() }));
 
 describe("RequirementsTable", () => {
   it("shows code, description, MoSCoW, priority and derived from (AC6.4)", () => {
@@ -28,6 +31,7 @@ describe("RequirementsTable", () => {
       "MoSCoW",
       "Priority",
       "Derived from",
+      "Actions",
     ]);
     const [, row] = within(table).getAllByRole("row");
     expect(within(row!).getByRole("rowheader")).toHaveTextContent("FR1");
@@ -71,5 +75,36 @@ describe("RequirementsTable", () => {
     );
 
     expect(screen.getAllByRole("rowheader").map((th) => th.textContent)).toEqual(["FR1", "FR2New"]);
+  });
+
+  it("marks only the requirements edited by the user (AC14.5)", () => {
+    render(
+      <RequirementsTable
+        id="functional"
+        title="Functional requirements"
+        requirements={[
+          buildRequirement({ code: "FR1" }),
+          buildRequirement({ code: "FR2", edited: true }),
+        ]}
+      />,
+    );
+
+    expect(screen.getAllByRole("rowheader").map((th) => th.textContent)).toEqual([
+      "FR1",
+      "FR2Edited",
+    ]);
+  });
+
+  it("offers editing and deleting for each requirement (AC14.1 / AC14.3)", () => {
+    render(
+      <RequirementsTable
+        id="functional"
+        title="Functional requirements"
+        requirements={[buildRequirement({ code: "FR1" })]}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Edit FR1" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Delete FR1" })).toBeEnabled();
   });
 });

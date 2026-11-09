@@ -8,8 +8,10 @@ import {
   generateRequirements,
   getPersonas,
   getRequirements,
+  deleteRequirement,
   listProjects,
   updatePersona,
+  updateRequirement,
 } from "./api";
 import { GENERATION_ERROR_MESSAGES, GenerationError, SERVER_UNREACHABLE_MESSAGE } from "./generation";
 
@@ -221,5 +223,54 @@ describe("generateMoreRequirements (US13)", () => {
     await expect(generateMoreRequirements("project-1", "persona-1")).rejects.toThrow(
       "This persona has reached the requirements limit.",
     );
+  });
+});
+
+describe("requirement editing (US14)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const edit = {
+    description: "New text.",
+    moscow: "could" as const,
+    priority: "low" as const,
+    derivedFrom: ["C1" as const],
+  };
+
+  it("PATCHes the changes (AC14.1)", async () => {
+    const fetchMock = mockFetch(200, { id: "r1", edited: true });
+
+    await expect(updateRequirement("r1", edit)).resolves.toEqual({
+      ok: true,
+      requirement: { id: "r1", edited: true },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/requirements\/r1$/),
+      expect.objectContaining({ method: "PATCH", body: JSON.stringify(edit) }),
+    );
+  });
+
+  it("returns the backend field errors on 400 (AC14.2)", async () => {
+    mockFetch(400, { error: "x", fieldErrors: { description: ["Description is required"] } });
+
+    await expect(updateRequirement("r1", edit)).resolves.toEqual({
+      ok: false,
+      fieldErrors: { description: ["Description is required"] },
+    });
+  });
+
+  it("deletes a requirement (AC14.3)", async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(deleteRequirement("r1")).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/requirements\/r1$/), {
+      method: "DELETE",
+    });
+  });
+
+  it("explains a requirement that no longer exists", async () => {
+    mockFetch(404, { error: "x" });
+
+    await expect(deleteRequirement("r1")).rejects.toThrow("no longer exists");
   });
 });

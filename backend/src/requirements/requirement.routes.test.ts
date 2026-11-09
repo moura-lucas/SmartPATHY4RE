@@ -35,6 +35,13 @@ beforeEach(() => {
       requirements: buildRequirementDtos(projectId, id),
     })),
     findByPersonaId: vi.fn(async () => buildRequirementDtos()),
+    findById: vi.fn(async (id) => (id === "requirement-1" ? buildRequirementDtos()[0]! : null)),
+    applyEdit: vi.fn(async (_id, edit) => ({
+      ...buildRequirementDtos()[0]!,
+      ...edit,
+      edited: true,
+    })),
+    deleteById: vi.fn(async (id) => id === "requirement-1"),
   };
 });
 
@@ -180,5 +187,70 @@ describe("GET /projects/:id/personas/:personaId/requirements", () => {
 
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: "Persona not found." });
+  });
+});
+
+describe("PATCH /requirements/:id", () => {
+  const edit = {
+    description: "New text.",
+    moscow: "could",
+    priority: "low",
+    derivedFrom: ["C1", "P1"],
+  };
+
+  it("saves the changes and returns the edited requirement (AC14.1 / AC14.5)", async () => {
+    const res = await request(app()).patch("/requirements/requirement-1").send(edit);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ ...edit, edited: true, code: "FR1" });
+  });
+
+  it("does not change the code or the type (AC14.1)", async () => {
+    await request(app())
+      .patch("/requirements/requirement-1")
+      .send({ ...edit, code: "FR99", type: "non_functional" });
+
+    expect(requirementRepository.applyEdit).toHaveBeenCalledWith("requirement-1", edit);
+  });
+
+  it("responds 400 for an empty description (AC14.2)", async () => {
+    const res = await request(app())
+      .patch("/requirements/requirement-1")
+      .send({ ...edit, description: "  " });
+
+    expect(res.status).toBe(400);
+    expect(res.body.fieldErrors.description).toEqual(["Description is required"]);
+    expect(requirementRepository.applyEdit).not.toHaveBeenCalled();
+  });
+
+  it("responds 400 without derived from codes (AC14.2)", async () => {
+    const res = await request(app())
+      .patch("/requirements/requirement-1")
+      .send({ ...edit, derivedFrom: [] });
+
+    expect(res.status).toBe(400);
+    expect(res.body.fieldErrors.derivedFrom).toEqual(["Select at least one PATHY code"]);
+  });
+
+  it("responds 404 for an unknown requirement", async () => {
+    const res = await request(app()).patch("/requirements/missing").send(edit);
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Requirement not found." });
+  });
+});
+
+describe("DELETE /requirements/:id (AC14.3)", () => {
+  it("responds 204 when it was deleted", async () => {
+    const res = await request(app()).delete("/requirements/requirement-1");
+
+    expect(res.status).toBe(204);
+    expect(requirementRepository.deleteById).toHaveBeenCalledWith("requirement-1");
+  });
+
+  it("responds 404 for an unknown requirement", async () => {
+    const res = await request(app()).delete("/requirements/missing");
+
+    expect(res.status).toBe(404);
   });
 });
