@@ -3,6 +3,7 @@ import { listProjects } from "@/lib/api";
 import { DashboardStats } from "./_dashboard/DashboardStats";
 import { EmptyDashboard } from "./_dashboard/EmptyDashboard";
 import { ProjectList } from "./_dashboard/ProjectList";
+import { WelcomeCard } from "./_dashboard/WelcomeCard";
 
 const RECENT_PROJECTS = 5;
 
@@ -40,6 +41,7 @@ export default async function Dashboard() {
               </Link>
             }
           />
+          <WelcomeCard />
         </>
       )}
     </main>

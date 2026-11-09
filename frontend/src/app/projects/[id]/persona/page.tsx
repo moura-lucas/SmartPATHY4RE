@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isRequirementsOutdated } from "@smartpathy/shared";
 import { GenerationLock } from "@/app/_generation/GenerationLock";
+import { InfoCard } from "@/app/_layout/InfoCard";
 import { getPersonas, getProject, getRequirements } from "@/lib/api";
 import { LEVEL_LABELS } from "@/lib/labels";
 import { personaQuery, selectPersona } from "@/lib/personas";
@@ -55,21 +56,27 @@ export default async function PersonaPage({
       {backLink}
 
       {/* AC4.2: identification header. */}
-      <header className="mt-4">
-        <p className="text-sm text-zinc-600 break-words dark:text-zinc-400">
-          PATHY Persona · {project.name}
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold break-words">{persona.name}</h1>
-        <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-          <div className="flex gap-1">
-            <dt className="text-zinc-600 dark:text-zinc-400">Age:</dt>
-            <dd>{persona.age}</dd>
-          </div>
-          <div className="flex gap-1">
-            <dt className="text-zinc-600 dark:text-zinc-400">Technology experience:</dt>
-            <dd>{LEVEL_LABELS[persona.techExperienceLevel]}</dd>
-          </div>
-        </dl>
+      <header className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm text-zinc-600 break-words dark:text-zinc-400">
+            PATHY Persona · {project.name}
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold break-words">{persona.name}</h1>
+          <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+            <div className="flex gap-1">
+              <dt className="text-zinc-600 dark:text-zinc-400">Age:</dt>
+              <dd>{persona.age}</dd>
+            </div>
+            <div className="flex gap-1">
+              <dt className="text-zinc-600 dark:text-zinc-400">Technology experience:</dt>
+              <dd>{LEVEL_LABELS[persona.techExperienceLevel]}</dd>
+            </div>
+          </dl>
+        </div>
+        <InfoCard title="About this persona" className="shrink-0 sm:w-72">
+          This persona was generated using the information you provided for this project and is
+          strictly aligned with the PATHY framework.
+        </InfoCard>
       </header>
 
       <GenerationLock>

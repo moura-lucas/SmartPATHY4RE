@@ -39,6 +39,16 @@ async function save(dialog: ReturnType<typeof openEdit>) {
   });
 }
 
+describe("RequirementActions: buttons", () => {
+  it.each(["Edit FR3", "Delete FR3"])("shows %s as an icon, keeping its accessible name", (name) => {
+    renderActions();
+
+    const button = screen.getByRole("button", { name });
+    expect(button).toHaveTextContent("");
+    expect(button.querySelector("svg")).toBeInTheDocument();
+  });
+});
+
 describe("RequirementActions: editing", () => {
   it("opens pre-filled, without fields for the code or the type (AC14.1)", () => {
     renderActions();

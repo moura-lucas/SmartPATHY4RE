@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { getCurrentUser } from "@/lib/api";
 import { AppSidebar } from "./_layout/AppSidebar";
+import { SIDEBAR_WIDTH_INIT_SCRIPT } from "./_layout/sidebarWidth";
 import { THEME_INIT_SCRIPT } from "./_layout/theme";
 import "./globals.css";
 
@@ -30,8 +31,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <head>
-        {/* Runs before the first paint so a saved dark theme does not flash white. */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {/* Runs before the first paint so saved preferences do not cause a visible jump. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT + SIDEBAR_WIDTH_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col">
         {user ? (
