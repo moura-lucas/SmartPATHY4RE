@@ -25,7 +25,7 @@ export function EmptyDashboard() {
           <li key={title} className="flex gap-3">
             <span
               aria-hidden="true"
-              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900"
+              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white"
             >
               {index + 1}
             </span>
