@@ -11,6 +11,7 @@ import {
   type TechExperienceLevel,
 } from "@smartpathy/shared";
 import { createProject } from "@/lib/api";
+import { ProjectGuidanceCard } from "./ProjectGuidanceCard";
 
 type FieldName = keyof CreateProjectInput;
 
@@ -104,89 +105,93 @@ export default function NewProjectPage() {
   });
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-10">
+    <main className="mx-auto w-full max-w-5xl px-4 py-10">
       <h1 className="text-2xl font-semibold">New Project</h1>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
         Describe the application. This context is used to generate the PATHY
         persona. Fields marked with * are required.
       </p>
 
-      <form
-        noValidate
-        onSubmit={handleSubmit}
-        onInput={clearError}
-        className="mt-8 flex flex-col gap-8"
-      >
-        <fieldset className="flex flex-col gap-5">
-          <legend className="mb-4 text-lg font-medium">Project</legend>
-          <Field label="Project name" name="name" required errors={errors.name}>
-            <input {...control("name")} maxLength={120} autoComplete="off" />
-          </Field>
-          <Field label="Application domain" name="domain" required errors={errors.domain}>
-            <input
-              {...control("domain")}
-              maxLength={80}
-              placeholder="e.g. Healthcare, Education"
-              autoComplete="off"
-            />
-          </Field>
-          <Field label="Description" name="description" required errors={errors.description}>
-            <textarea {...control("description")} maxLength={5000} rows={5} />
-          </Field>
-          <Field
-            label="Additional context"
-            name="additionalContext"
-            errors={errors.additionalContext}
-          >
-            <textarea {...control("additionalContext")} maxLength={5000} rows={4} />
-          </Field>
-        </fieldset>
+      <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <form
+          noValidate
+          onSubmit={handleSubmit}
+          onInput={clearError}
+          className="flex flex-col gap-8"
+        >
+          <fieldset className="flex flex-col gap-5">
+            <legend className="mb-4 text-lg font-medium">Project</legend>
+            <Field label="Project name" name="name" required errors={errors.name}>
+              <input {...control("name")} maxLength={120} autoComplete="off" />
+            </Field>
+            <Field label="Application domain" name="domain" required errors={errors.domain}>
+              <input
+                {...control("domain")}
+                maxLength={80}
+                placeholder="e.g. Healthcare, Education"
+                autoComplete="off"
+              />
+            </Field>
+            <Field label="Description" name="description" required errors={errors.description}>
+              <textarea {...control("description")} maxLength={5000} rows={5} />
+            </Field>
+            <Field
+              label="Additional context"
+              name="additionalContext"
+              errors={errors.additionalContext}
+            >
+              <textarea {...control("additionalContext")} maxLength={5000} rows={4} />
+            </Field>
+          </fieldset>
 
-        <fieldset className="flex flex-col gap-5">
-          <legend className="mb-4 text-lg font-medium">Persona</legend>
-          <div className="grid gap-5 sm:grid-cols-[1fr_12rem]">
-            <Field label="Persona name" name="personaName" errors={errors.personaName}>
-              <input {...control("personaName")} maxLength={80} autoComplete="off" />
-            </Field>
-            <Field label="Persona age" name="personaAge" errors={errors.personaAge}>
-              <input {...control("personaAge")} inputMode="numeric" autoComplete="off" />
-            </Field>
-          </div>
-          <Field
-            label="Technology experience level"
-            name="techExperienceLevel"
-            required
-            errors={errors.techExperienceLevel}
-          >
-            <select {...control("techExperienceLevel")} defaultValue="">
-              <option value="" disabled>
-                Select…
-              </option>
-              {TECH_EXPERIENCE_LEVELS.map((level) => (
-                <option key={level} value={level}>
-                  {LEVEL_LABELS[level]}
+          <fieldset className="flex flex-col gap-5">
+            <legend className="mb-4 text-lg font-medium">Persona</legend>
+            <div className="grid gap-5 sm:grid-cols-[1fr_12rem]">
+              <Field label="Persona name" name="personaName" errors={errors.personaName}>
+                <input {...control("personaName")} maxLength={80} autoComplete="off" />
+              </Field>
+              <Field label="Persona age" name="personaAge" errors={errors.personaAge}>
+                <input {...control("personaAge")} inputMode="numeric" autoComplete="off" />
+              </Field>
+            </div>
+            <Field
+              label="Technology experience level"
+              name="techExperienceLevel"
+              required
+              errors={errors.techExperienceLevel}
+            >
+              <select {...control("techExperienceLevel")} defaultValue="">
+                <option value="" disabled>
+                  Select…
                 </option>
-              ))}
-            </select>
-          </Field>
-        </fieldset>
+                {TECH_EXPERIENCE_LEVELS.map((level) => (
+                  <option key={level} value={level}>
+                    {LEVEL_LABELS[level]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </fieldset>
 
-        {submitError && (
-          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-            {submitError}
-          </p>
-        )}
+          {submitError && (
+            <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+              {submitError}
+            </p>
+          )}
 
-        <div className="flex flex-wrap gap-3">
-          <button type="submit" disabled={submitting} className="btn-primary">
-            {submitting ? "Creating…" : "Create Project"}
-          </button>
-          {/* AC2.8: navigation only, nothing is sent to the backend. */}
-          <Link href="/" className="btn-secondary">
-            Cancel
-          </Link>
-        </div>
-      </form>
+          <div className="flex flex-wrap gap-3">
+            <button type="submit" disabled={submitting} className="btn-primary">
+              {submitting ? "Creating…" : "Create Project"}
+            </button>
+            {/* AC2.8: navigation only, nothing is sent to the backend. */}
+            <Link href="/" className="btn-secondary">
+              Cancel
+            </Link>
+          </div>
+        </form>
+        {/* No controls inside, so showing it first on narrow screens does not affect tab order. */}
+        <ProjectGuidanceCard className="order-first lg:order-last" />
+      </div>
     </main>
   );
 }

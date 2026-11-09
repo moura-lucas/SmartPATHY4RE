@@ -44,6 +44,13 @@ describe("PersonaPage", () => {
     ]);
   });
 
+  it("explains where the persona came from", async () => {
+    await renderPage();
+    expect(screen.getByRole("region", { name: "About this persona" })).toHaveTextContent(
+      "strictly aligned with the PATHY framework",
+    );
+  });
+
   it("offers an Edit button for each of the five sections (AC7.1)", async () => {
     await renderPage();
     for (const { label } of PATHY_SECTIONS) {

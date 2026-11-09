@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { listProjects } from "@/lib/api";
 import { buildProjectSummary } from "@/test/fixtures";
@@ -22,7 +22,14 @@ describe("Dashboard", () => {
 
     expect(screen.getByRole("region", { name: "Overview" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Clinic App" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Welcome to SmartPATHY" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/You do not have any projects yet/)).not.toBeInTheDocument();
+  });
+
+  it("shows the welcome card with the workflow stages alongside the projects", async () => {
+    await renderDashboard();
+
+    const card = screen.getByRole("region", { name: "Welcome to SmartPATHY" });
+    expect(within(card).getAllByRole("listitem")).toHaveLength(4);
   });
 
   it("lists only the recent projects and links to the full list", async () => {
@@ -31,7 +38,8 @@ describe("Dashboard", () => {
     );
     await renderDashboard();
 
-    expect(screen.getAllByRole("listitem")).toHaveLength(5);
+    const recent = screen.getByRole("region", { name: "Recent projects" });
+    expect(within(recent).getAllByRole("listitem")).toHaveLength(5);
     expect(screen.getByRole("link", { name: /View all projects/ })).toHaveAttribute(
       "href",
       "/projects",
