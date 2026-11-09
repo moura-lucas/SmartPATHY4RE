@@ -8,6 +8,10 @@ export const GENERATION_ERROR_MESSAGES: Record<GenerationErrorCode, string> = {
     "The AI usage limit has been reached. Please wait a while before trying again.",
   ai_invalid_response:
     "The AI returned an invalid response. Retrying usually solves it.",
+  ai_invalid_key: "Your Gemini key was not accepted. Please check it in Settings.",
+  ai_key_limit: "Your Gemini key has reached its usage limit. Please check your plan with Google.",
+  ai_daily_limit:
+    "You have used all of today's free generations. Add your own Gemini key in Settings to keep going.",
 };
 
 export const SERVER_UNREACHABLE_MESSAGE =

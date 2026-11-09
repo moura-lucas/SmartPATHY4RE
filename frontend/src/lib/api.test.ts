@@ -5,13 +5,16 @@ import {
   deletePersona,
   generateMoreRequirements,
   getCurrentUser,
+  getGeminiKeyStatus,
   login,
   logout,
   register,
+  saveGeminiKey,
   generatePersona,
   generateRequirements,
   getPersonas,
   getRequirements,
+  deleteGeminiKey,
   deleteProject,
   deleteRequirement,
   listProjects,
@@ -401,5 +404,57 @@ describe("session (US18)", () => {
 
     mockFetch(401, { error: "x" });
     await expect(getCurrentUser()).resolves.toBeNull();
+  });
+});
+
+describe("Gemini key", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("reads the status", async () => {
+    mockFetch(200, { hasKey: false });
+
+    await expect(getGeminiKeyStatus()).resolves.toEqual({ hasKey: false });
+  });
+
+  it("saves a key", async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(saveGeminiKey("k")).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\/account\/gemini-key$/),
+      expect.objectContaining({ method: "PUT", body: JSON.stringify({ apiKey: "k" }) }),
+    );
+  });
+
+  it("returns why a key was refused", async () => {
+    mockFetch(400, { error: "Invalid key.", fieldErrors: { apiKey: ["Google did not accept"] } });
+
+    await expect(saveGeminiKey("k")).resolves.toEqual({ ok: false, error: "Google did not accept" });
+  });
+
+  it("returns the error when the key cannot be checked", async () => {
+    mockFetch(502, { error: "Could not check the key right now." });
+
+    await expect(saveGeminiKey("k")).resolves.toEqual({
+      ok: false,
+      error: "Could not check the key right now.",
+    });
+  });
+
+  it("removes a key", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: 204 })));
+
+    await expect(deleteGeminiKey()).resolves.toBeUndefined();
+  });
+
+  it.each([
+    ["ai_invalid_key", /check it in Settings/],
+    ["ai_key_limit", /reached its usage limit/],
+    ["ai_daily_limit", /Add your own Gemini key/],
+  ] as const)("explains %s in plain language", async (code, message) => {
+    mockFetch(code === "ai_daily_limit" ? 429 : 502, { error: "Technical", code });
+
+    await expect(generatePersona("project-1")).rejects.toThrow(message);
   });
 });

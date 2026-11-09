@@ -1,3 +1,4 @@
+import { testAccount } from "../account/account.fixtures.js";
 import { testAuth } from "../auth/auth.fixtures.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
@@ -19,7 +20,7 @@ const accented = { ...project, name: "Gestão Clínica", domain: "Saúde" };
 
 function app() {
   const llm = new LlmService({ complete: async () => "{}" });
-  return createApp({ auth: testAuth, llm, projectRepository, personaRepository, requirementRepository });
+  return createApp({ auth: testAuth, account: testAccount, llm, projectRepository, personaRepository, requirementRepository });
 }
 
 beforeEach(() => {

@@ -39,6 +39,7 @@ services:
     environment:
       DATABASE_URL: mysql://smartpathy:${DB_PASSWORD:?}@db:3306/smartpathy
       GEMINI_API_KEY: ${GEMINI_API_KEY:?}
+      KEY_ENCRYPTION_SECRET: ${KEY_ENCRYPTION_SECRET:?}
       LLM_MODEL: ${LLM_MODEL:-gemini-3.5-flash}
       PORT: "4000"
       CORS_ORIGIN: https://${DOMAIN:?}

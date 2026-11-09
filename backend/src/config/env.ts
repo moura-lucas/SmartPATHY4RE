@@ -4,6 +4,8 @@ const EnvSchema = z.object({
   DATABASE_URL: z.string().trim().min(1),
   GEMINI_API_KEY: z.string().trim().min(1),
   LLM_MODEL: z.string().min(1).default("gemini-3.5-flash"),
+  // 32 random bytes in hex (openssl rand -hex 32): encrypts the users' Gemini keys.
+  KEY_ENCRYPTION_SECRET: z.string().regex(/^[0-9a-fA-F]{64}$/),
   PORT: z.coerce.number().int().positive().default(4000),
   // The only origin the browser may call the API from with credentials.
   CORS_ORIGIN: z.string().trim().min(1).default("http://localhost:3000"),
