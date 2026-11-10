@@ -19,7 +19,7 @@ export function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
                 {label}
               </Link>
             ) : (
-              <span aria-current="page" className="font-medium text-zinc-900 dark:text-zinc-100">
+              <span aria-current="page" className="min-w-0 font-medium break-words text-brand dark:text-violet-300">
                 {label}
               </span>
             )}

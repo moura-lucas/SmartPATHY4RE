@@ -36,8 +36,8 @@ export default async function Dashboard() {
             projects={projects.slice(0, RECENT_PROJECTS)}
             title="Recent projects"
             action={
-              <Link href="/projects" className="text-sm font-medium text-brand hover:underline dark:text-violet-300">
-                View all projects →
+              <Link href="/projects" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:underline dark:text-violet-300">
+                View all projects <span aria-hidden="true">›</span>
               </Link>
             }
           />

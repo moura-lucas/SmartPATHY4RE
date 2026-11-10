@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Breadcrumb } from "@/app/_layout/Breadcrumb";
 import { notFound } from "next/navigation";
 import { getPersonas, getProject, getRequirements } from "@/lib/api";
 import { LEVEL_LABELS } from "@/lib/labels";
@@ -31,9 +32,7 @@ export default async function ProjectPage({
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-10">
-      <Link href="/" className="text-sm text-zinc-600 hover:underline dark:text-zinc-400">
-        ← Dashboard
-      </Link>
+      <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: project.name }]} />
       <h1 className="mt-4 text-2xl font-semibold break-words">{project.name}</h1>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
         Created on{" "}
