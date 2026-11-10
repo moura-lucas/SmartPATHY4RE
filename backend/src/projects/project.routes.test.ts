@@ -76,7 +76,7 @@ beforeEach(() => {
     remove: vi.fn(async (id) => id === stored.id),
     isOwnedBy: vi.fn(async () => true),
     listSummaries: vi.fn(async (): Promise<ProjectSummaryDto[]> => [
-      { ...stored, hasPersona: true, requirementsCount: 3, stage: "requirements_generated" },
+      { ...stored, hasPersona: true, personasCount: 2, requirementsCount: 3, stage: "requirements_generated" },
     ]),
   };
 });
@@ -197,7 +197,7 @@ describe("GET /projects", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual([
-      { ...stored, hasPersona: true, requirementsCount: 3, stage: "requirements_generated" },
+      { ...stored, hasPersona: true, personasCount: 2, requirementsCount: 3, stage: "requirements_generated" },
     ]);
     expect(repository.listSummaries).toHaveBeenCalledWith(TEST_USER.id);
   });

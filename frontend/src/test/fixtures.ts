@@ -25,10 +25,12 @@ export function buildProjectSummary(
   overrides: Partial<Omit<ProjectSummaryDto, "stage">> = {},
 ): ProjectSummaryDto {
   const hasPersona = overrides.hasPersona ?? false;
+  const personasCount = overrides.personasCount ?? (hasPersona ? 1 : 0);
   const requirementsCount = overrides.requirementsCount ?? 0;
   return {
     ...buildProject(overrides),
     hasPersona,
+    personasCount,
     requirementsCount,
     stage: projectStage({ hasPersona, requirementsCount }),
   };

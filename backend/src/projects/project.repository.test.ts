@@ -113,6 +113,8 @@ describe("createProjectRepository", () => {
       { id: "project-3", hasPersona: true, requirementsCount: 0, stage: "persona_generated" },
       { id: "project-1", hasPersona: false, requirementsCount: 0, stage: "created" },
     ]);
+    // Every persona counts, not only whether the project has one.
+    expect(summaries.map(({ personasCount }) => personasCount)).toEqual([2, 1, 0]);
     expect(summaries[0]).toMatchObject({ name: "Clinic App", createdAt: "2026-10-09T12:00:00.000Z" });
     expect(summaries[0]).not.toHaveProperty("_count");
   });
