@@ -4,7 +4,7 @@ import { getPersonas, getProject, getRequirements } from "@/lib/api";
 import { personaQuery, selectPersona } from "@/lib/personas";
 import { GenerateRequirementsButton } from "../persona/GenerateRequirementsButton";
 import { PersonaSwitcher } from "../persona/PersonaSwitcher";
-import { Breadcrumb } from "./Breadcrumb";
+import { Breadcrumb } from "@/app/_layout/Breadcrumb";
 import { GenerateMoreRequirementsButton } from "./GenerateMoreRequirementsButton";
 import { RequirementsSummary } from "./RequirementsSummary";
 import { RequirementsTable } from "./RequirementsTable";

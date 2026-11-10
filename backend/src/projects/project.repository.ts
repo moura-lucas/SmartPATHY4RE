@@ -90,7 +90,12 @@ export function createProjectRepository(
           hasPersona: _count.personas > 0,
           requirementsCount: _count.requirements,
         };
-        return { ...toDto(project), ...progress, stage: projectStage(progress) };
+        return {
+          ...toDto(project),
+          ...progress,
+          personasCount: _count.personas,
+          stage: projectStage(progress),
+        };
       });
     },
   };

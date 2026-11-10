@@ -29,5 +29,6 @@ describe("Breadcrumb", () => {
     );
     expect(within(nav).queryByRole("link", { name: "Requirements" })).not.toBeInTheDocument();
     expect(within(nav).getByText("Requirements")).toHaveAttribute("aria-current", "page");
+    expect(within(nav).getByText("Requirements")).toHaveClass("text-brand");
   });
 });

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Breadcrumb } from "@/app/_layout/Breadcrumb";
 import { BuildingIcon, CloseIcon, UserIcon } from "@/app/_layout/icons";
 import { getPersonas, getProject, getRequirements } from "@/lib/api";
-import { Breadcrumb } from "../requirements/Breadcrumb";
 import { ExportForm, type ExportablePersona } from "./ExportForm";
 import type { ReactNode } from "react";
 

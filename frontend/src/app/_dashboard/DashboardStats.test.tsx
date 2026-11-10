@@ -8,7 +8,7 @@ describe("DashboardStats", () => {
     render(
       <DashboardStats
         projects={[
-          buildProjectSummary({ id: "a", hasPersona: true, requirementsCount: 16 }),
+          buildProjectSummary({ id: "a", hasPersona: true, personasCount: 3, requirementsCount: 16 }),
           buildProjectSummary({ id: "b", hasPersona: true, requirementsCount: 3 }),
           buildProjectSummary({ id: "c", hasPersona: true }),
           buildProjectSummary({ id: "d" }),
@@ -19,7 +19,7 @@ describe("DashboardStats", () => {
     const overview = screen.getByRole("region", { name: "Overview" });
     const value = (term: string) => within(overview).getByText(term).nextElementSibling;
     expect(value("Projects")).toHaveTextContent("4");
-    expect(value("Generated personas")).toHaveTextContent("3");
+    expect(value("Generated personas")).toHaveTextContent("5");
     expect(value("Generated requirements")).toHaveTextContent("19");
   });
 });

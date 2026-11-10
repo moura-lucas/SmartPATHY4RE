@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isRequirementsOutdated } from "@smartpathy/shared";
 import { GenerationLock } from "@/app/_generation/GenerationLock";
+import { Breadcrumb } from "@/app/_layout/Breadcrumb";
 import { InfoCard } from "@/app/_layout/InfoCard";
 import { getPersonas, getProject, getRequirements } from "@/lib/api";
 import { LEVEL_LABELS } from "@/lib/labels";
@@ -24,20 +25,21 @@ export default async function PersonaPage({
   if (!project) notFound(); // AC4.7
   const persona = selectPersona(personas ?? [], requested);
 
-  const backLink = (
-    <Link
-      href={`/projects/${project.id}`}
-      className="text-sm text-zinc-600 hover:underline dark:text-zinc-400"
-    >
-      ← Project
-    </Link>
+  const breadcrumb = (
+    <Breadcrumb
+      items={[
+        { label: "Projects", href: "/projects" },
+        { label: project.name, href: `/projects/${project.id}` },
+        { label: "Persona" },
+      ]}
+    />
   );
 
   // AC4.6: the project exists but has no persona yet.
   if (!persona) {
     return (
       <main className="mx-auto w-full max-w-3xl px-4 py-10">
-        {backLink}
+        {breadcrumb}
         <h1 className="mt-4 text-2xl font-semibold">PATHY Persona</h1>
         <p className="mt-2 break-words text-zinc-600 dark:text-zinc-400">
           The project <strong>{project.name}</strong> does not have a persona yet.
@@ -53,7 +55,7 @@ export default async function PersonaPage({
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-10">
-      {backLink}
+      {breadcrumb}
 
       {/* AC4.2: identification header. */}
       <header className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

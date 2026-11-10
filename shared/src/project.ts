@@ -141,6 +141,7 @@ export function projectStage(progress: {
 /** A project with its progress, as listed on the dashboard (GET /projects). */
 export interface ProjectSummaryDto extends ProjectDto {
   hasPersona: boolean;
+  personasCount: number;
   requirementsCount: number;
   stage: ProjectStage;
 }

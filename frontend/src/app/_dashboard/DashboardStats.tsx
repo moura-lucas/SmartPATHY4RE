@@ -4,7 +4,7 @@ import type { ProjectSummaryDto } from "@smartpathy/shared";
 export function DashboardStats({ projects }: { projects: ProjectSummaryDto[] }) {
   const stats: [string, number][] = [
     ["Projects", projects.length],
-    ["Generated personas", projects.filter((p) => p.hasPersona).length],
+    ["Generated personas", projects.reduce((sum, p) => sum + p.personasCount, 0)],
     ["Generated requirements", projects.reduce((sum, p) => sum + p.requirementsCount, 0)],
   ];
 
